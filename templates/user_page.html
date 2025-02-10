@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{ user.username }} のページ</title>
+</head>
+<body>
+    <h1>{{ user.username }} さんのページ</h1>
+    <!-- ユーザ固有の情報をここで表示 -->
+    <p>ユーザID: {{ user.id }}</p>
+    <p>何らかの専用情報をここに置けます</p>
+
+    <a href="{{ url_for('logout') }}">ログアウト</a>
+</body>
+</html>
