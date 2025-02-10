@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ログイン</title>
+</head>
+<body>
+    <h1>ログインページ</h1>
+    <form method="POST">
+        {{ form.hidden_tag() }}
+        <div>
+            <label for="username">ユーザー名</label>
+            {{ form.username }}
+        </div>
+        <div>
+            <label for="password">パスワード</label>
+            {{ form.password }}
+        </div>
+        <div>
+            <button type="submit">ログイン</button>
+        </div>
+    </form>
+</body>
+</html>
