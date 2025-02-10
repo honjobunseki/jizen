@@ -1,15 +1,25 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>{{ user.username }} のページ</title>
+    <title>{{ user.username }} さんのページ</title>
 </head>
 <body>
     <h1>{{ user.username }} さんのページ</h1>
-    <!-- ユーザ固有の情報をここで表示 -->
-    <p>ユーザID: {{ user.id }}</p>
-    <p>何らかの専用情報をここに置けます</p>
-
-    <a href="{{ url_for('logout') }}">ログアウト</a>
+    <h2>施行パートナー</h2>
+    <ul>
+      {% for partner in partners %}
+        <li>
+            <strong>業者名:</strong> {{ partner.company_name }}<br>
+            <strong>代表者:</strong> {{ partner.representative or '未入力' }}<br>
+            <strong>電話番号:</strong> {{ partner.phone_number }}<br>
+            <!-- 必要に応じて他の情報も表示 -->
+        </li>
+      {% else %}
+        <li>まだ施行パートナーが登録されていません</li>
+      {% endfor %}
+    </ul>
+    <p><a href="{{ url_for('add_partner', username=user.username) }}">施行パートナー（下請け・協力業者）登録</a></p>
+    <p><a href="{{ url_for('logout') }}">ログアウト</a></p>
 </body>
 </html>
