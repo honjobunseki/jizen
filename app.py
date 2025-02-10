@@ -1,73 +1,61 @@
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
-import os
+from flask_login import LoginManager, login_user, logout_user, login_required, current_user, UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
-# Flaskアプリケーションの設定
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# SECRET_KEYを環境変数から取得
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your_default_secret_key')  # 環境変数がない場合のデフォルト値
-
-# RenderのPostgreSQL接続情報を環境変数から取得
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')  # Renderの環境変数を使用
-
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # トラッキングを無効に
-
-# SQLAlchemyの初期化
 db = SQLAlchemy(app)
-
-# ログインマネージャーの設定
-login_manager = LoginManager()
-login_manager.init_app(app)
+login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# ユーザーモデル（データベースのテーブルとして使用）
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(150), nullable=False)
+    username = db.Column(db.String(64), unique=True, nullable=False)
+    password = db.Column(db.String(256), nullable=False)
 
-# ユーザーの読み込み
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# インデックスページ（ホームページ）
 @app.route('/')
-def home():
+def index():
+    # ホームページ（未ログインOK）
     return render_template('index.html')
 
-# ログインページ
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # ログインページ
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        user = User.query.filter_by(username=username).first()  # ユーザー名で検索
-        if user and user.password == password:  # パスワードが一致する場合
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password, password):
             login_user(user)
             return redirect(url_for('dashboard'))
+        else:
+            return render_template('login.html', error='ユーザ名またはパスワードが間違っています。')
     return render_template('login.html')
 
-# ダッシュボードページ（ログイン後）
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    # ログイン後のユーザ専用ページ
+    return render_template('dashboard.html', username=current_user.username)
 
-# ログアウト
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('home'))
+    return redirect(url_for('index'))
 
-# データベース作成（最初の実行時にデータベースファイルを作成）
+# 初回にDBを作成したいときだけ有効化（Renderでは別途スクリプト化も可）
 @app.before_first_request
 def create_tables():
     db.create_all()
 
-# アプリケーションの実行
 if __name__ == '__main__':
     app.run(debug=True)
