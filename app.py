@@ -11,7 +11,7 @@ ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'  # 本番では十分にランダムな値に変更してください
+app.config['SECRET_KEY'] = 'your_secret_key'  # 本番環境では十分にランダムで秘密な値に変更してください
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydb.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -25,9 +25,9 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    # 既存の施行パートナー情報
+    # 施行パートナー情報
     partners = db.relationship('Partner', backref='owner', lazy=True)
-    # 担当者情報（Staff）のリレーション
+    # 担当者（スタッフ）情報
     staffs = db.relationship('Staff', backref='owner', lazy=True)
 
 # 施行パートナーモデル（例）
@@ -37,7 +37,7 @@ class Partner(db.Model):
     company_name = db.Column(db.String(200), nullable=False)
     representative = db.Column(db.String(200))
     phone_number = db.Column(db.String(20))
-    # その他の項目は省略
+    # ※その他の項目は省略
 
 # 担当者（スタッフ）モデル
 class Staff(db.Model):
@@ -79,11 +79,11 @@ def index():
 def login():
     error = None
     if request.method == 'POST':
-        # 入力値の前後空白を除去
+        # 入力された値の前後空白を除去
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
         
-        # 管理者としてログインする場合の判定
+        # 管理者としてログインする場合
         if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if not admin:
@@ -98,7 +98,7 @@ def login():
             flash("管理者としてログインしました", "success")
             return redirect(url_for('admin'))
         
-        # 通常ユーザとしてログイン
+        # 通常ユーザとしてのログイン処理
         user = User.query.filter_by(username=uname).first()
         if user and check_password_hash(user.password, pw):
             login_user(user)
