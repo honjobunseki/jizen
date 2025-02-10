@@ -5,20 +5,18 @@
     <title>ログイン</title>
 </head>
 <body>
-    <h1>ログインページ</h1>
+    <h1>ログイン</h1>
+    {% if error %}
+    <p style="color:red">{{ error }}</p>
+    {% endif %}
     <form method="POST">
-        {{ form.hidden_tag() }}
-        <div>
-            <label for="username">ユーザー名</label>
-            {{ form.username }}
-        </div>
-        <div>
-            <label for="password">パスワード</label>
-            {{ form.password }}
-        </div>
-        <div>
-            <button type="submit">ログイン</button>
-        </div>
+        <label for="username">ユーザ名:</label>
+        <input type="text" name="username" id="username" required>
+        <br>
+        <label for="password">パスワード:</label>
+        <input type="password" name="password" id="password" required>
+        <br>
+        <button type="submit">ログイン</button>
     </form>
 </body>
 </html>
