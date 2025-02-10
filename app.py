@@ -6,6 +6,10 @@ from flask_login import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
+# 管理者用定数
+ADMIN_USERNAME = 'honjobunseki'
+ADMIN_PASSWORD = '78387838'
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'  # 本番では十分にランダムな値に変更してください
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydb.db'
@@ -79,13 +83,13 @@ def login():
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
         
-        # 管理者としてログインする場合のチェック
-        if uname == 'honjobunseki' and pw == '78387838':
-            admin = User.query.filter_by(username='honjobunseki').first()
+        # 管理者としてログインする場合の判定
+        if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
+            admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if not admin:
                 admin = User(
-                    username='honjobunseki',
-                    password=generate_password_hash('78387838'),
+                    username=ADMIN_USERNAME,
+                    password=generate_password_hash(ADMIN_PASSWORD),
                     is_admin=True
                 )
                 db.session.add(admin)
@@ -115,7 +119,6 @@ def logout():
 @app.route('/admin')
 @login_required
 def admin():
-    # 管理者ユーザでなければアクセス拒否
     if not current_user.is_admin:
         return "権限がありません", 403
     users = User.query.all()
@@ -128,7 +131,6 @@ def user_page(username):
     user = User.query.filter_by(username=username).first()
     if not user:
         return "ユーザが見つかりません", 404
-    # 自分のページまたは管理者ならアクセス可能
     if user.username != current_user.username and not current_user.is_admin:
         return "他のユーザのページにはアクセスできません", 403
     partners = Partner.query.filter_by(user_id=user.id).all()
