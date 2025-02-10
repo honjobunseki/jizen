@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>会員ページ</title>
+</head>
+<body>
+    <h1>会員ページ</h1>
+    <p>ようこそ、{{ current_user.username }} さん！</p>
+    <a href="{{ url_for('logout') }}">ログアウト</a>
+</body>
+</html>
