@@ -12,129 +12,206 @@
 <body>
   <div class="container mt-4">
     <h1>{{ user.username }} さんのページ</h1>
-    <!-- ナビゲーションタブ -->
-    <ul class="nav nav-tabs" id="userTab" role="tablist">
-      <!-- プロフィールタブ（任意で追加） -->
+    <!-- タブナビゲーション -->
+    <ul class="nav nav-tabs" id="userPageTab" role="tablist">
       <li class="nav-item">
-        <a class="nav-link active" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="true">
+        <a class="nav-link" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="false">
           プロフィール
         </a>
       </li>
-      <!-- 施行パートナー一覧タブ -->
       <li class="nav-item">
-        <a class="nav-link" id="partners-list-tab" data-toggle="tab" href="#partners-list" role="tab" aria-controls="partners-list" aria-selected="false">
-          施行パートナー一覧
+        <a class="nav-link active" id="staff-list-tab" data-toggle="tab" href="#staff-list" role="tab" aria-controls="staff-list" aria-selected="true">
+          担当者一覧
         </a>
       </li>
-      <!-- 施行パートナー登録タブ -->
       <li class="nav-item">
-        <a class="nav-link" id="partners-add-tab" data-toggle="tab" href="#partners-add" role="tab" aria-controls="partners-add" aria-selected="false">
-          施行パートナー（下請け・協力業者）登録
+        <a class="nav-link" id="staff-add-tab" data-toggle="tab" href="#staff-add" role="tab" aria-controls="staff-add" aria-selected="false">
+          担当者登録
         </a>
       </li>
     </ul>
 
-    <!-- タブのコンテンツ -->
-    <div class="tab-content mt-3" id="userTabContent">
-      <!-- プロフィールタブの内容 -->
-      <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
-        <p>ここにはユーザの基本情報やプロフィールが表示されます。</p>
-        <p><a href="{{ url_for('logout') }}">ログアウト</a></p>
+    <!-- タブコンテンツ -->
+    <div class="tab-content mt-3" id="userPageTabContent">
+      <!-- プロフィールタブ (任意) -->
+      <div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+        <p>ここにプロフィール情報を表示します。</p>
       </div>
 
-      <!-- 施行パートナー一覧タブの内容 -->
-      <div class="tab-pane fade" id="partners-list" role="tabpanel" aria-labelledby="partners-list-tab">
-        <h2>施行パートナー一覧</h2>
+      <!-- 担当者一覧タブ -->
+      <div class="tab-pane fade show active" id="staff-list" role="tabpanel" aria-labelledby="staff-list-tab">
+        <h2>担当者一覧</h2>
         <ul class="list-group">
-          {% for partner in partners %}
+          {% for staff in staffs %}
             <li class="list-group-item">
-              <strong>業者名:</strong> {{ partner.company_name }}<br>
-              <strong>代表者:</strong> {{ partner.representative or '未入力' }}<br>
-              <strong>電話番号:</strong> {{ partner.phone_number }}<br>
-              <!-- 必要に応じて他の項目も表示 -->
+              <strong>担当者氏名:</strong> {{ staff.staff_name }}<br>
+              <strong>業者種別:</strong> {{ staff.vendor_type }}<br>
+              <!-- 必要に応じて担当者種別や追加情報を表示 -->
+              {% if staff.is_asbestos_qualified %}
+                <em>石綿有資格者</em>
+              {% endif %}
+              <!-- その他の項目も表示可能 -->
             </li>
           {% else %}
-            <li class="list-group-item">まだ施行パートナーが登録されていません</li>
+            <li class="list-group-item">まだ担当者が登録されていません</li>
           {% endfor %}
         </ul>
       </div>
 
-      <!-- 施行パートナー登録タブの内容 -->
-      <div class="tab-pane fade" id="partners-add" role="tabpanel" aria-labelledby="partners-add-tab">
-        <h2>施行パートナー（下請け・協力業者）登録</h2>
-        <form method="POST" action="{{ url_for('add_partner', username=user.username) }}">
+      <!-- 担当者登録タブ -->
+      <div class="tab-pane fade" id="staff-add" role="tabpanel" aria-labelledby="staff-add-tab">
+        <h2>担当者登録</h2>
+        <form method="POST" action="{{ url_for('add_staff', username=user.username) }}">
+          <!-- 担当者情報 -->
           <div class="form-group">
-            <label for="company_name">業者名</label>
-            <input type="text" class="form-control" id="company_name" name="company_name" required>
-          </div>
-          <div class="form-group">
-            <label for="representative">代表者職氏名（任意）</label>
-            <input type="text" class="form-control" id="representative" name="representative">
-          </div>
-          <div class="form-group">
-            <label for="labor_insurance_number">労働保険番号（任意）（半角数字で入力してください）</label>
-            <input type="text" class="form-control" id="labor_insurance_number" name="labor_insurance_number">
-          </div>
-          <div class="form-group">
-            <label for="prefecture_code">府県コード</label>
-            <input type="text" class="form-control" id="prefecture_code" name="prefecture_code" required>
-          </div>
-          <div class="form-group">
-            <label for="responsibility">所掌</label>
-            <input type="text" class="form-control" id="responsibility" name="responsibility" required>
-          </div>
-          <div class="form-group">
-            <label for="jurisdiction">管轄</label>
-            <input type="text" class="form-control" id="jurisdiction" name="jurisdiction" required>
-          </div>
-          <div class="form-group">
-            <label for="main_number">基幹番号</label>
-            <input type="text" class="form-control" id="main_number" name="main_number" required>
-          </div>
-          <div class="form-group">
-            <label for="branch_number">枝番号</label>
-            <input type="text" class="form-control" id="branch_number" name="branch_number" required>
-          </div>
-          <div class="form-group">
-            <label for="free_input">自由入力</label>
-            <textarea class="form-control" id="free_input" name="free_input"></textarea>
-          </div>
-          <div class="form-group">
-            <label for="postal_code">郵便番号</label>
-            <input type="text" class="form-control" id="postal_code" name="postal_code" required>
-          </div>
-          <div class="form-group">
-            <label for="address_prefecture">所在地（都道府県）</label>
-            <input type="text" class="form-control" id="address_prefecture" name="address_prefecture" required>
-          </div>
-          <div class="form-group">
-            <label for="address_city">所在地（市区町村）</label>
-            <input type="text" class="form-control" id="address_city" name="address_city" required>
-          </div>
-          <div class="form-group">
-            <label for="address_town">所在地（町域）（任意）</label>
-            <input type="text" class="form-control" id="address_town" name="address_town">
-          </div>
-          <div class="form-group">
-            <label for="address_details">所在地（詳細）（任意）</label>
-            <input type="text" class="form-control" id="address_details" name="address_details">
-          </div>
-          <div class="form-group">
-            <label for="phone_number">電話番号（半角数字で入力してください）</label>
-            <input type="text" class="form-control" id="phone_number" name="phone_number" required>
-          </div>
-          <div class="form-group">
-            <label for="fax_number">FAX番号（任意）</label>
-            <input type="text" class="form-control" id="fax_number" name="fax_number">
-            <div class="form-check mt-2">
-              <input type="checkbox" class="form-check-input" id="fax_same" name="fax_same">
-              <label class="form-check-label" for="fax_same">電話番号と同じ</label>
+            <label>業者種別</label><br>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" name="vendor_type" value="元請業者">
+              <label class="form-check-label">元請業者（排出事業者）</label>
             </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" name="vendor_type" value="施行パートナー">
+              <label class="form-check-label">施行パートナー（下請け・協力業者）</label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="partner_id">業者（施行パートナーの場合）</label>
+            <select class="form-control" name="partner_id" id="partner_id">
+              <option value="">選択してください</option>
+              {% for partner in partners %}
+                <option value="{{ partner.id }}">{{ partner.company_name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="staff_name">担当者氏名</label>
+            <input type="text" class="form-control" name="staff_name" id="staff_name" required>
+          </div>
+
+          <div class="form-group">
+            <label>担当者種別</label><br>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" name="is_handover">
+              <label class="form-check-label">引渡し担当者</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" name="is_registration">
+              <label class="form-check-label">登録担当者</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" name="is_transport">
+              <label class="form-check-label">運搬担当者</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" name="is_asbestos_qualified" id="is_asbestos_qualified">
+              <label class="form-check-label">石綿有資格者</label>
+            </div>
+            <div class="form-check form-check-inline">
+              <input class="form-check-input" type="checkbox" name="is_construction">
+              <label class="form-check-label">工事担当者</label>
+            </div>
+          </div>
+
+          <!-- 担当者種別：石綿有資格者種別 (JavaScriptで表示/非表示する) -->
+          <div id="asbestos_fields" style="display:none;">
+            <h5>石綿有資格者種別</h5>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="is_asbestos_chief" id="is_asbestos_chief">
+              <label class="form-check-label" for="is_asbestos_chief">石綿作業主任者</label>
+            </div>
+            <div id="asbestos_chief_fields" style="display:none;" class="ml-3">
+              <div class="form-group">
+                <label for="asbestos_chief_reg_number">石綿作業主任者 登録番号</label>
+                <input type="text" class="form-control" name="asbestos_chief_reg_number" id="asbestos_chief_reg_number">
+              </div>
+              <div class="form-group">
+                <label for="asbestos_chief_training_org">講習実施機関の名称</label>
+                <input type="text" class="form-control" name="asbestos_chief_training_org" id="asbestos_chief_training_org">
+              </div>
+            </div>
+            
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="is_building_inspector" id="is_building_inspector">
+              <label class="form-check-label" for="is_building_inspector">建築物石綿含有建材調査者</label>
+            </div>
+            <div id="building_inspector_fields" style="display:none;" class="ml-3">
+              <div class="form-group">
+                <label for="building_inspector_reg_number">建築物石綿含有建材調査者 登録番号</label>
+                <input type="text" class="form-control" name="building_inspector_reg_number" id="building_inspector_reg_number">
+              </div>
+              <div class="form-group">
+                <label>資格</label><br>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="checkbox" name="building_inspector_qualification" value="一般">
+                  <label class="form-check-label">一般</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="checkbox" name="building_inspector_qualification" value="特定">
+                  <label class="form-check-label">特定</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="checkbox" name="building_inspector_qualification" value="一戸建て等">
+                  <label class="form-check-label">一戸建て等</label>
+                </div>
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="checkbox" name="building_inspector_qualification" value="その他">
+                  <label class="form-check-label">その他</label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="building_inspector_training_org">講習実施機関の名称</label>
+                <input type="text" class="form-control" name="building_inspector_training_org" id="building_inspector_training_org">
+              </div>
+            </div>
+            
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="is_preliminary_inspector" id="is_preliminary_inspector">
+              <label class="form-check-label" for="is_preliminary_inspector">工作物石綿事前調査者</label>
+            </div>
+            <div id="preliminary_inspector_fields" style="display:none;" class="ml-3">
+              <div class="form-group">
+                <label for="preliminary_inspector_reg_number">工作物石綿事前調査者 登録番号</label>
+                <input type="text" class="form-control" name="preliminary_inspector_reg_number" id="preliminary_inspector_reg_number">
+              </div>
+              <div class="form-group">
+                <label for="preliminary_inspector_training_org">講習実施機関の名称</label>
+                <input type="text" class="form-control" name="preliminary_inspector_training_org" id="preliminary_inspector_training_org">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="email">メールアドレス（任意）</label>
+            <input type="email" class="form-control" name="email" id="email">
           </div>
           <button type="submit" class="btn btn-primary">保存</button>
         </form>
       </div>
     </div>
   </div>
+
+  <!-- JavaScriptでチェックボックスに応じた入力欄の表示制御 -->
+  <script>
+    // 担当者種別「石綿有資格者」のチェックで表示切替
+    document.getElementById('is_asbestos_qualified').addEventListener('change', function() {
+      var display = this.checked ? 'block' : 'none';
+      document.getElementById('asbestos_fields').style.display = display;
+    });
+    // 各資格のチェックで追加入力欄の表示制御
+    document.getElementById('is_asbestos_chief').addEventListener('change', function() {
+      var display = this.checked ? 'block' : 'none';
+      document.getElementById('asbestos_chief_fields').style.display = display;
+    });
+    document.getElementById('is_building_inspector').addEventListener('change', function() {
+      var display = this.checked ? 'block' : 'none';
+      document.getElementById('building_inspector_fields').style.display = display;
+    });
+    document.getElementById('is_preliminary_inspector').addEventListener('change', function() {
+      var display = this.checked ? 'block' : 'none';
+      document.getElementById('preliminary_inspector_fields').style.display = display;
+    });
+  </script>
 </body>
 </html>
