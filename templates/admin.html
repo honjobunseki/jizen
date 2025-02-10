@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>管理者ページ</title>
+    <title>管理画面</title>
 </head>
 <body>
-    <h1>管理者ページ</h1>
-    <p>ユーザー管理</p>
+    <h1>管理画面</h1>
+    <p><a href="{{ url_for('add_user') }}">ユーザ追加</a></p>
     <ul>
-        {% for user in users %}
-            <li>{{ user.username }} - {% if user.is_admin %}管理者{% else %}一般ユーザー{% endif %}</li>
-        {% endfor %}
+      {% for user in users %}
+        <li>{{ user.username }} - <a href="{{ url_for('user_page', username=user.username) }}">ユーザページへ</a></li>
+      {% endfor %}
     </ul>
 </body>
 </html>
