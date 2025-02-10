@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <title>管理画面</title>
@@ -9,8 +9,11 @@
     <p><a href="{{ url_for('add_user') }}">ユーザ追加</a></p>
     <ul>
       {% for user in users %}
-        <li>{{ user.username }} - <a href="{{ url_for('user_page', username=user.username) }}">ユーザページへ</a></li>
+        <li>
+            {{ user.username }} - <a href="{{ url_for('user_page', username=user.username) }}">ユーザページへ</a>
+        </li>
       {% endfor %}
     </ul>
+    <p><a href="{{ url_for('logout') }}">ログアウト</a></p>
 </body>
 </html>
