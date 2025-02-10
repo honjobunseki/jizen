@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>施行パートナー登録</title>
+</head>
+<body>
+    <h1>施行パートナー（下請け・協力業者）登録</h1>
+    {% if error %}
+      <p style="color:red;">{{ error }}</p>
+    {% endif %}
+    <form method="POST">
+        <label>業者名:
+            <input type="text" name="company_name" required>
+        </label><br>
+        <label>代表者職氏名（任意）:
+            <input type="text" name="representative">
+        </label><br>
+        <label>労働保険番号（任意）:
+            <input type="text" name="labor_insurance_number">
+        </label><br>
+        <label>府県コード:
+            <input type="text" name="prefecture_code" required>
+        </label><br>
+        <label>所掌:
+            <input type="text" name="responsibility" required>
+        </label><br>
+        <label>管轄:
+            <input type="text" name="jurisdiction" required>
+        </label><br>
+        <label>基幹番号:
+            <input type="text" name="main_number" required>
+        </label><br>
+        <label>枝番号:
+            <input type="text" name="branch_number" required>
+        </label><br>
+        <label>自由入力:
+            <textarea name="free_input"></textarea>
+        </label><br>
+        <label>郵便番号:
+            <input type="text" name="postal_code" required>
+        </label><br>
+        <label>所在地（都道府県）:
+            <input type="text" name="address_prefecture" required>
+        </label><br>
+        <label>所在地（市区町村）:
+            <input type="text" name="address_city" required>
+        </label><br>
+        <label>所在地（町域）（任意）:
+            <input type="text" name="address_town">
+        </label><br>
+        <label>所在地（詳細）（任意）:
+            <input type="text" name="address_details">
+        </label><br>
+        <label>電話番号:
+            <input type="text" name="phone_number" required>
+        </label><br>
+        <label>FAX番号（任意）:
+            <input type="text" name="fax_number">
+            <input type="checkbox" name="fax_same"> 電話番号と同じ
+        </label><br>
+        <button type="submit">保存</button>
+    </form>
+    <p><a href="{{ url_for('user_page', username=user.username) }}">戻る</a></p>
+</body>
+</html>
