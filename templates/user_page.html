@@ -3,54 +3,136 @@
 <head>
   <meta charset="UTF-8">
   <title>{{ user.username }} さんのページ</title>
-  <!-- Bootstrap CSS -->
+  <!-- Bootstrap CSS (CDN) -->
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <!-- jQuery と Bootstrap JS -->
+  <!-- jQuery と Bootstrap JS (CDN) -->
   <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
   <div class="container mt-4">
     <h1>{{ user.username }} さんのページ</h1>
-    
-    <!-- タブナビゲーション -->
+    <!-- ナビゲーションタブ -->
     <ul class="nav nav-tabs" id="userTab" role="tablist">
+      <!-- プロフィールタブ（任意で追加） -->
       <li class="nav-item">
-        <a class="nav-link active" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="true">プロフィール</a>
+        <a class="nav-link active" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="true">
+          プロフィール
+        </a>
       </li>
+      <!-- 施行パートナー一覧タブ -->
       <li class="nav-item">
-        <a class="nav-link" id="partners-tab" data-toggle="tab" href="#partners" role="tab" aria-controls="partners" aria-selected="false">施行パートナー一覧</a>
+        <a class="nav-link" id="partners-list-tab" data-toggle="tab" href="#partners-list" role="tab" aria-controls="partners-list" aria-selected="false">
+          施行パートナー一覧
+        </a>
+      </li>
+      <!-- 施行パートナー登録タブ -->
+      <li class="nav-item">
+        <a class="nav-link" id="partners-add-tab" data-toggle="tab" href="#partners-add" role="tab" aria-controls="partners-add" aria-selected="false">
+          施行パートナー（下請け・協力業者）登録
+        </a>
       </li>
     </ul>
 
-    <!-- タブの内容 -->
+    <!-- タブのコンテンツ -->
     <div class="tab-content mt-3" id="userTabContent">
-      <!-- プロフィールタブ -->
+      <!-- プロフィールタブの内容 -->
       <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
         <p>ここにはユーザの基本情報やプロフィールが表示されます。</p>
         <p><a href="{{ url_for('logout') }}">ログアウト</a></p>
       </div>
 
-      <!-- 施行パートナー一覧タブ -->
-      <div class="tab-pane fade" id="partners" role="tabpanel" aria-labelledby="partners-tab">
+      <!-- 施行パートナー一覧タブの内容 -->
+      <div class="tab-pane fade" id="partners-list" role="tabpanel" aria-labelledby="partners-list-tab">
         <h2>施行パートナー一覧</h2>
-        <ul>
+        <ul class="list-group">
           {% for partner in partners %}
-            <li>
+            <li class="list-group-item">
               <strong>業者名:</strong> {{ partner.company_name }}<br>
               <strong>代表者:</strong> {{ partner.representative or '未入力' }}<br>
               <strong>電話番号:</strong> {{ partner.phone_number }}<br>
               <!-- 必要に応じて他の項目も表示 -->
             </li>
           {% else %}
-            <li>まだ施行パートナーが登録されていません</li>
+            <li class="list-group-item">まだ施行パートナーが登録されていません</li>
           {% endfor %}
         </ul>
-        <p>
-          <a href="{{ url_for('add_partner', username=user.username) }}" class="btn btn-primary">
-            施行パートナー（下請け・協力業者）登録
-          </a>
-        </p>
+      </div>
+
+      <!-- 施行パートナー登録タブの内容 -->
+      <div class="tab-pane fade" id="partners-add" role="tabpanel" aria-labelledby="partners-add-tab">
+        <h2>施行パートナー（下請け・協力業者）登録</h2>
+        <form method="POST" action="{{ url_for('add_partner', username=user.username) }}">
+          <div class="form-group">
+            <label for="company_name">業者名</label>
+            <input type="text" class="form-control" id="company_name" name="company_name" required>
+          </div>
+          <div class="form-group">
+            <label for="representative">代表者職氏名（任意）</label>
+            <input type="text" class="form-control" id="representative" name="representative">
+          </div>
+          <div class="form-group">
+            <label for="labor_insurance_number">労働保険番号（任意）（半角数字で入力してください）</label>
+            <input type="text" class="form-control" id="labor_insurance_number" name="labor_insurance_number">
+          </div>
+          <div class="form-group">
+            <label for="prefecture_code">府県コード</label>
+            <input type="text" class="form-control" id="prefecture_code" name="prefecture_code" required>
+          </div>
+          <div class="form-group">
+            <label for="responsibility">所掌</label>
+            <input type="text" class="form-control" id="responsibility" name="responsibility" required>
+          </div>
+          <div class="form-group">
+            <label for="jurisdiction">管轄</label>
+            <input type="text" class="form-control" id="jurisdiction" name="jurisdiction" required>
+          </div>
+          <div class="form-group">
+            <label for="main_number">基幹番号</label>
+            <input type="text" class="form-control" id="main_number" name="main_number" required>
+          </div>
+          <div class="form-group">
+            <label for="branch_number">枝番号</label>
+            <input type="text" class="form-control" id="branch_number" name="branch_number" required>
+          </div>
+          <div class="form-group">
+            <label for="free_input">自由入力</label>
+            <textarea class="form-control" id="free_input" name="free_input"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="postal_code">郵便番号</label>
+            <input type="text" class="form-control" id="postal_code" name="postal_code" required>
+          </div>
+          <div class="form-group">
+            <label for="address_prefecture">所在地（都道府県）</label>
+            <input type="text" class="form-control" id="address_prefecture" name="address_prefecture" required>
+          </div>
+          <div class="form-group">
+            <label for="address_city">所在地（市区町村）</label>
+            <input type="text" class="form-control" id="address_city" name="address_city" required>
+          </div>
+          <div class="form-group">
+            <label for="address_town">所在地（町域）（任意）</label>
+            <input type="text" class="form-control" id="address_town" name="address_town">
+          </div>
+          <div class="form-group">
+            <label for="address_details">所在地（詳細）（任意）</label>
+            <input type="text" class="form-control" id="address_details" name="address_details">
+          </div>
+          <div class="form-group">
+            <label for="phone_number">電話番号（半角数字で入力してください）</label>
+            <input type="text" class="form-control" id="phone_number" name="phone_number" required>
+          </div>
+          <div class="form-group">
+            <label for="fax_number">FAX番号（任意）</label>
+            <input type="text" class="form-control" id="fax_number" name="fax_number">
+            <div class="form-check mt-2">
+              <input type="checkbox" class="form-check-input" id="fax_same" name="fax_same">
+              <label class="form-check-label" for="fax_same">電話番号と同じ</label>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">保存</button>
+        </form>
       </div>
     </div>
   </div>
