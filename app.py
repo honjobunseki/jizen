@@ -135,21 +135,47 @@ def admin():
 @app.route('/user/<username>')
 @login_required
 def user_page(username):
-    print(f"Accessing user page for: {username}")  # デバッグ出力
+    # デバッグ情報を画面に表示するための辞書
+    debug_info = {
+        "リクエスト情報": {
+            "アクセス要求されたユーザー名": username,
+            "現在のユーザーID": current_user.id,
+            "現在のユーザー名": current_user.username,
+            "管理者権限": current_user.is_admin
+        }
+    }
+    
     user = User.query.filter_by(username=username).first()
     if not user:
-        print(f"User not found: {username}")  # デバッグ出力
-        return "ユーザが見つかりません", 404
+        debug_info["エラー"] = f"ユーザー {username} がデータベースに見つかりません"
+        return render_template('error.html', debug_info=debug_info), 404
     
-    print(f"Current user is admin: {current_user.is_admin}")  # デバッグ出力
+    debug_info["データベース情報"] = {
+        "見つかったユーザーID": user.id,
+        "見つかったユーザー名": user.username
+    }
+    
     if not current_user.is_admin and user.username != current_user.username:
-        print(f"Access denied. Current user: {current_user.username}, Requested user: {username}")  # デバッグ出力
-        return "他のユーザのページにはアクセスできません", 403
+        debug_info["エラー"] = "アクセス権限がありません"
+        return render_template('error.html', debug_info=debug_info), 403
     
-    partners = Partner.query.filter_by(user_id=user.id).all()
-    staffs = Staff.query.filter_by(user_id=user.id).all()
-    print(f"Found {len(partners)} partners and {len(staffs)} staffs")  # デバッグ出力
-    return render_template('user_page.html', user=user, partners=partners, staffs=staffs)
+    try:
+        partners = Partner.query.filter_by(user_id=user.id).all()
+        staffs = Staff.query.filter_by(user_id=user.id).all()
+        
+        debug_info["取得データ"] = {
+            "パートナー数": len(partners),
+            "スタッフ数": len(staffs)
+        }
+        
+        return render_template('user_page.html', 
+                             user=user, 
+                             partners=partners, 
+                             staffs=staffs, 
+                             debug_info=debug_info)
+    except Exception as e:
+        debug_info["エラー"] = str(e)
+        return render_template('error.html', debug_info=debug_info), 500
 
 # 管理画面：新規ユーザ追加
 @app.route('/admin/add_user', methods=['GET', 'POST'])
