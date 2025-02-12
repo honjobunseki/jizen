@@ -77,20 +77,36 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
+    debug_info = {
+        "リクエスト情報": {
+            "メソッド": request.method
+        }
+    }
+    
     if request.method == 'POST':
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
+        debug_info["リクエスト情報"]["入力されたユーザー名"] = uname
         
         if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
+            debug_info["処理"] = "管理者ログイン試行"
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+            
             if not admin:
+                debug_info["処理"] = "管理者ユーザー作成"
                 admin = User(
                     username=ADMIN_USERNAME,
                     password=generate_password_hash(ADMIN_PASSWORD),
                     is_admin=True
                 )
-                db.session.add(admin)
-                db.session.commit()
+                try:
+                    db.session.add(admin)
+                    db.session.commit()
+                    debug_info["処理"] += " - 成功"
+                except Exception as e:
+                    debug_info["エラー"] = str(e)
+                    return render_template('error.html', debug_info=debug_info), 500
+            
             login_user(admin)
             flash("管理者としてログインしました", "success")
             return redirect(url_for('admin'))
@@ -102,8 +118,9 @@ def login():
             return redirect(url_for('index'))
         else:
             error = "ユーザ名またはパスワードが間違っています。"
-    return render_template('login.html', error=error)
-
+            debug_info["エラー"] = error
+    
+    return render_template('login.html', error=error, debug_info=debug_info)
 @app.route('/logout')
 @login_required
 def logout():
