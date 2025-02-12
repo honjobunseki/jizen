@@ -66,7 +66,17 @@ def load_user(user_id):
 
 @app.before_first_request
 def create_tables():
-    db.create_all()
+    with app.app_context():
+        db.create_all()
+        admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+        if not admin:
+            admin = User(
+                username=ADMIN_USERNAME,
+                password=generate_password_hash(ADMIN_PASSWORD),
+                is_admin=True
+            )
+            db.session.add(admin)
+            db.session.commit()
 
 @app.route('/')
 def index():
@@ -77,8 +87,8 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
-        
-        # 管理者ログイン
+
+        # 管理者ログイン処理
         if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if not admin:
@@ -91,28 +101,26 @@ def login():
                 db.session.commit()
             login_user(admin)
             return redirect(url_for('admin'))
-        
-        # 一般ユーザーログイン
+
+        # 一般ユーザーログイン処理
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
             return redirect(url_for('user_page', username=username))
         
-        flash('ユーザー名またはパスワードが間違っています', 'error')
+        flash('ユーザー名またはパスワードが間違っています', 'danger')
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
-    flash('ログアウトしました', 'info')
     return redirect(url_for('index'))
 
 @app.route('/admin')
 @login_required
 def admin():
     if not current_user.is_admin:
-        flash('管理者権限が必要です', 'error')
         return redirect(url_for('index'))
     users = User.query.all()
     return render_template('admin.html', users=users)
@@ -122,11 +130,8 @@ def admin():
 def user_page(username):
     user = User.query.filter_by(username=username).first()
     if not user:
-        flash('ユーザーが見つかりません', 'error')
         return redirect(url_for('index'))
-    
     if not current_user.is_admin and current_user.username != username:
-        flash('アクセス権限がありません', 'error')
         return redirect(url_for('index'))
     
     partners = Partner.query.filter_by(user_id=user.id).all()
@@ -137,7 +142,6 @@ def user_page(username):
 @login_required
 def add_user():
     if not current_user.is_admin:
-        flash('管理者権限が必要です', 'error')
         return redirect(url_for('index'))
     
     if request.method == 'POST':
@@ -145,7 +149,7 @@ def add_user():
         password = request.form.get('password', '').strip()
         
         if User.query.filter_by(username=username).first():
-            flash('そのユーザー名は既に使用されています', 'error')
+            flash('そのユーザー名は既に使用されています', 'danger')
         else:
             new_user = User(
                 username=username,
@@ -154,7 +158,6 @@ def add_user():
             )
             db.session.add(new_user)
             db.session.commit()
-            flash('ユーザーを追加しました', 'success')
             return redirect(url_for('admin'))
     
     return render_template('add_user.html')
@@ -163,18 +166,12 @@ def add_user():
 @login_required
 def delete_user(user_id):
     if not current_user.is_admin:
-        flash('管理者権限が必要です', 'error')
         return redirect(url_for('index'))
     
     user = User.query.get(user_id)
-    if not user:
-        flash('ユーザーが見つかりません', 'error')
-    elif user.username == ADMIN_USERNAME:
-        flash('管理者ユーザーは削除できません', 'error')
-    else:
+    if user and user.username != ADMIN_USERNAME:
         db.session.delete(user)
         db.session.commit()
-        flash('ユーザーを削除しました', 'success')
     
     return redirect(url_for('admin'))
 
@@ -183,11 +180,9 @@ def delete_user(user_id):
 def add_partner(username):
     user = User.query.filter_by(username=username).first()
     if not user:
-        flash('ユーザーが見つかりません', 'error')
         return redirect(url_for('index'))
     
     if not current_user.is_admin and current_user.username != username:
-        flash('アクセス権限がありません', 'error')
         return redirect(url_for('index'))
     
     if request.method == 'POST':
@@ -199,7 +194,6 @@ def add_partner(username):
         )
         db.session.add(new_partner)
         db.session.commit()
-        flash('施行パートナーを登録しました', 'success')
         return redirect(url_for('user_page', username=username))
     
     return render_template('add_partner.html', user=user)
@@ -209,11 +203,9 @@ def add_partner(username):
 def add_staff(username):
     user = User.query.filter_by(username=username).first()
     if not user:
-        flash('ユーザーが見つかりません', 'error')
         return redirect(url_for('index'))
     
     if not current_user.is_admin and current_user.username != username:
-        flash('アクセス権限がありません', 'error')
         return redirect(url_for('index'))
     
     if request.method == 'POST':
@@ -241,7 +233,6 @@ def add_staff(username):
         )
         db.session.add(new_staff)
         db.session.commit()
-        flash('担当者を登録しました', 'success')
         return redirect(url_for('user_page', username=username))
     
     partners = Partner.query.filter_by(user_id=user.id).all()
