@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <title>ログイン</title>
-    <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
         body {
@@ -31,7 +30,7 @@
                             {% endif %}
                         {% endwith %}
 
-                        <form method="POST">
+                        <form method="POST" action="{{ url_for('login') }}">
                             <div class="form-group">
                                 <label for="username">ユーザー名</label>
                                 <input type="text" class="form-control" id="username" name="username" required>
