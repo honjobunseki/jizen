@@ -135,14 +135,20 @@ def admin():
 @app.route('/user/<username>')
 @login_required
 def user_page(username):
+    print(f"Accessing user page for: {username}")  # デバッグ出力
     user = User.query.filter_by(username=username).first()
     if not user:
+        print(f"User not found: {username}")  # デバッグ出力
         return "ユーザが見つかりません", 404
-    # 管理者ならどのユーザページにもアクセス可能、通常ユーザは自分のページのみアクセス可能
+    
+    print(f"Current user is admin: {current_user.is_admin}")  # デバッグ出力
     if not current_user.is_admin and user.username != current_user.username:
+        print(f"Access denied. Current user: {current_user.username}, Requested user: {username}")  # デバッグ出力
         return "他のユーザのページにはアクセスできません", 403
+    
     partners = Partner.query.filter_by(user_id=user.id).all()
     staffs = Staff.query.filter_by(user_id=user.id).all()
+    print(f"Found {len(partners)} partners and {len(staffs)} staffs")  # デバッグ出力
     return render_template('user_page.html', user=user, partners=partners, staffs=staffs)
 
 # 管理画面：新規ユーザ追加
