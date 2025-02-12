@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
@@ -11,25 +12,30 @@ ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'  # 本番環境では十分にランダムな値に変更してください
 
-# PostgreSQL の jizen データベースを利用するための接続文字列（ご自身の環境に合わせて変更）
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://your_postgres_user:your_postgres_password@your_postgres_host:your_postgres_port/jizen'
+# 環境変数からSECRET_KEYを取得
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback_secret_key')
+
+# 環境変数からPostgreSQL接続情報を取得し、接続文字列を生成
+db_host = os.environ.get('DB_HOST', 'localhost')
+db_name = os.environ.get('DB_NAME', 'jizen')
+db_port = os.environ.get('DB_PORT', '5432')
+db_user = os.environ.get('DB_USER', 'jizen_user')
+db_password = os.environ.get('DB_PASSWORD', '')
+
+app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# ユーザモデル
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    # ※必要に応じて施行パートナー情報や担当者情報のリレーションを追加できます
-
-# ※ここではシンプルにユーザ管理に専念します
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -47,13 +53,14 @@ def index():
 def login():
     error = None
     if request.method == 'POST':
-        # 入力値の前後の空白を除去
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
-        # 管理者としてログインする場合
+        
+        # 管理者ログイン
         if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if not admin:
+                # 管理者ユーザが存在しなければ自動作成
                 admin = User(
                     username=ADMIN_USERNAME,
                     password=generate_password_hash(ADMIN_PASSWORD),
@@ -64,7 +71,8 @@ def login():
             login_user(admin)
             flash("管理者としてログインしました", "success")
             return redirect(url_for('admin'))
-        # 通常ユーザとしてのログイン
+        
+        # 一般ユーザログイン
         user = User.query.filter_by(username=uname).first()
         if user and check_password_hash(user.password, pw):
             login_user(user)
@@ -87,8 +95,7 @@ def logout():
 def admin():
     if not current_user.is_admin:
         return "権限がありません", 403
-    users = User.query.all()
-    return render_template('admin.html', users=users)
+    return render_template('admin.html')
 
 # 管理画面：新規ユーザ追加
 @app.route('/admin/add_user', methods=['GET', 'POST'])
@@ -124,7 +131,6 @@ def delete_user(user_id):
     if not user_to_delete:
         flash("削除対象のユーザが見つかりません", "warning")
         return redirect(url_for('admin'))
-    # 管理者自身は削除できないようにする
     if user_to_delete.username == ADMIN_USERNAME:
         flash("管理者ユーザは削除できません", "danger")
         return redirect(url_for('admin'))
@@ -133,14 +139,13 @@ def delete_user(user_id):
     flash("ユーザが削除されました", "success")
     return redirect(url_for('admin'))
 
-# ユーザごとのページ
+# ユーザページ
 @app.route('/user/<username>')
 @login_required
 def user_page(username):
     user = User.query.filter_by(username=username).first()
     if not user:
         return "ユーザが見つかりません", 404
-    # 管理者はすべてのユーザページにアクセス可能、通常ユーザは自分のページのみアクセス可能
     if not current_user.is_admin and user.username != current_user.username:
         return "他のユーザのページにはアクセスできません", 403
     return render_template('user_page.html', user=user)
