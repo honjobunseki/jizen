@@ -11,8 +11,10 @@ ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'  # 本番では十分にランダムな値に変更してください
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydb.db'
+app.config['SECRET_KEY'] = 'your_secret_key'  # 本番環境では十分にランダムな値に変更してください
+
+# PostgreSQL の jizen データベースを利用するための接続文字列（ご自身の環境に合わせて変更）
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://your_postgres_user:your_postgres_password@your_postgres_host:your_postgres_port/jizen'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -25,6 +27,9 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    # ※必要に応じて施行パートナー情報や担当者情報のリレーションを追加できます
+
+# ※ここではシンプルにユーザ管理に専念します
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -34,12 +39,10 @@ def load_user(user_id):
 def create_tables():
     db.create_all()
 
-# トップページ（任意）
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# ログインページ
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     error = None
@@ -47,12 +50,10 @@ def login():
         # 入力値の前後の空白を除去
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
-
-        # 管理者としてログインする場合のチェック
+        # 管理者としてログインする場合
         if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if not admin:
-                # 管理者ユーザが存在しなければ自動作成
                 admin = User(
                     username=ADMIN_USERNAME,
                     password=generate_password_hash(ADMIN_PASSWORD),
@@ -63,19 +64,16 @@ def login():
             login_user(admin)
             flash("管理者としてログインしました", "success")
             return redirect(url_for('admin'))
-        
-        # 一般ユーザとしてのログイン処理
+        # 通常ユーザとしてのログイン
         user = User.query.filter_by(username=uname).first()
         if user and check_password_hash(user.password, pw):
             login_user(user)
             flash("ログインしました", "success")
-            # 一般ユーザの場合、入力したユーザのページに移動
             return redirect(url_for('user_page', username=user.username))
         else:
             error = "ユーザ名またはパスワードが間違っています。"
     return render_template('login.html', error=error)
 
-# ログアウト
 @app.route('/logout')
 @login_required
 def logout():
@@ -89,18 +87,60 @@ def logout():
 def admin():
     if not current_user.is_admin:
         return "権限がありません", 403
-    # 管理者の場合、管理画面用のテンプレート（admin.html）を表示
-    return render_template('admin.html')
+    users = User.query.all()
+    return render_template('admin.html', users=users)
 
-# ユーザページ
+# 管理画面：新規ユーザ追加
+@app.route('/admin/add_user', methods=['GET', 'POST'])
+@login_required
+def add_user():
+    if not current_user.is_admin:
+        return "権限がありません", 403
+    error = None
+    if request.method == 'POST':
+        uname = request.form.get('username', '').strip()
+        pw = request.form.get('password', '').strip()
+        if User.query.filter_by(username=uname).first():
+            error = "そのユーザ名は既に使われています。"
+        else:
+            new_user = User(
+                username=uname,
+                password=generate_password_hash(pw),
+                is_admin=False
+            )
+            db.session.add(new_user)
+            db.session.commit()
+            flash("ユーザが追加されました", "success")
+            return redirect(url_for('admin'))
+    return render_template('add_user.html', error=error)
+
+# 管理画面：ユーザ削除
+@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@login_required
+def delete_user(user_id):
+    if not current_user.is_admin:
+        return "権限がありません", 403
+    user_to_delete = User.query.get(user_id)
+    if not user_to_delete:
+        flash("削除対象のユーザが見つかりません", "warning")
+        return redirect(url_for('admin'))
+    # 管理者自身は削除できないようにする
+    if user_to_delete.username == ADMIN_USERNAME:
+        flash("管理者ユーザは削除できません", "danger")
+        return redirect(url_for('admin'))
+    db.session.delete(user_to_delete)
+    db.session.commit()
+    flash("ユーザが削除されました", "success")
+    return redirect(url_for('admin'))
+
+# ユーザごとのページ
 @app.route('/user/<username>')
 @login_required
 def user_page(username):
-    # データベースから対象のユーザを取得
     user = User.query.filter_by(username=username).first()
     if not user:
         return "ユーザが見つかりません", 404
-    # 管理者なら全ユーザページにアクセス可能、通常ユーザは自分のページのみ
+    # 管理者はすべてのユーザページにアクセス可能、通常ユーザは自分のページのみアクセス可能
     if not current_user.is_admin and user.username != current_user.username:
         return "他のユーザのページにはアクセスできません", 403
     return render_template('user_page.html', user=user)
