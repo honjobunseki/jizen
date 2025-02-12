@@ -97,5 +97,25 @@
       </div>
     </div>
   </div>
+  <!-- user_page.htmlの内容の最後に追加 -->
+{% if debug_info %}
+    <div style="margin-top: 50px; padding: 20px; background: #f8f9fa; border: 1px solid #ddd;">
+        <h3>デバッグ情報</h3>
+        {% for section, data in debug_info.items() %}
+            <div style="margin-bottom: 15px;">
+                <strong>{{ section }}:</strong>
+                {% if data is mapping %}
+                    <ul>
+                    {% for key, value in data.items() %}
+                        <li>{{ key }}: {{ value }}</li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p>{{ data }}</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
 </body>
 </html>
