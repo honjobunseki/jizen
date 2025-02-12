@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>エラー</title>
+    <style>
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 5px;
+        }
+        .debug-section {
+            margin-bottom: 15px;
+        }
+        .debug-title {
+            font-weight: bold;
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <h1>エラーが発生しました</h1>
+    
+    <div class="debug-info">
+        <h2>デバッグ情報</h2>
+        {% for section, data in debug_info.items() %}
+            <div class="debug-section">
+                <div class="debug-title">{{ section }}:</div>
+                {% if data is mapping %}
+                    {% for key, value in data.items() %}
+                        <div>{{ key }}: {{ value }}</div>
+                    {% endfor %}
+                {% else %}
+                    <div>{{ data }}</div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    
+    <p><a href="{{ url_for('admin') }}">管理画面に戻る</a></p>
+</body>
+</html>
