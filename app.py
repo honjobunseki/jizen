@@ -11,7 +11,7 @@ ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'  # 本番環境では十分にランダムで秘密な値に変更してください
+app.config['SECRET_KEY'] = 'your_secret_key'  # 本番では十分にランダムな値に変更してください
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///mydb.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -25,9 +25,9 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    # 施行パートナー情報
+    # 施行パートナー情報（既存）
     partners = db.relationship('Partner', backref='owner', lazy=True)
-    # 担当者（スタッフ）情報
+    # 担当者情報（Staff）のリレーション
     staffs = db.relationship('Staff', backref='owner', lazy=True)
 
 # 施行パートナーモデル（例）
@@ -37,7 +37,7 @@ class Partner(db.Model):
     company_name = db.Column(db.String(200), nullable=False)
     representative = db.Column(db.String(200))
     phone_number = db.Column(db.String(20))
-    # ※その他の項目は省略
+    # その他の項目は省略
 
 # 担当者（スタッフ）モデル
 class Staff(db.Model):
@@ -79,7 +79,6 @@ def index():
 def login():
     error = None
     if request.method == 'POST':
-        # 入力された値の前後空白を除去
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
         
@@ -98,7 +97,7 @@ def login():
             flash("管理者としてログインしました", "success")
             return redirect(url_for('admin'))
         
-        # 通常ユーザとしてのログイン処理
+        # 通常ユーザのログイン処理
         user = User.query.filter_by(username=uname).first()
         if user and check_password_hash(user.password, pw):
             login_user(user)
@@ -123,6 +122,49 @@ def admin():
         return "権限がありません", 403
     users = User.query.all()
     return render_template('admin.html', users=users)
+
+# 管理画面：新規ユーザ追加
+@app.route('/admin/add_user', methods=['GET', 'POST'])
+@login_required
+def add_user():
+    if not current_user.is_admin:
+        return "権限がありません", 403
+    error = None
+    if request.method == 'POST':
+        uname = request.form.get('username', '').strip()
+        pw = request.form.get('password', '').strip()
+        if User.query.filter_by(username=uname).first():
+            error = "そのユーザ名は既に使われています。"
+        else:
+            new_user = User(
+                username=uname,
+                password=generate_password_hash(pw),
+                is_admin=False
+            )
+            db.session.add(new_user)
+            db.session.commit()
+            flash("ユーザが追加されました", "success")
+            return redirect(url_for('admin'))
+    return render_template('add_user.html', error=error)
+
+# 管理画面：ユーザ削除
+@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@login_required
+def delete_user(user_id):
+    if not current_user.is_admin:
+        return "権限がありません", 403
+    # 管理者自身は削除させない
+    user_to_delete = User.query.get(user_id)
+    if not user_to_delete:
+        flash("削除対象のユーザが見つかりません", "warning")
+        return redirect(url_for('admin'))
+    if user_to_delete.username == ADMIN_USERNAME:
+        flash("管理者ユーザは削除できません", "danger")
+        return redirect(url_for('admin'))
+    db.session.delete(user_to_delete)
+    db.session.commit()
+    flash("ユーザが削除されました", "success")
+    return redirect(url_for('admin'))
 
 # ユーザごとのページ
 @app.route('/user/<username>')
