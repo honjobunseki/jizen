@@ -5,19 +5,18 @@
     <title>ユーザ追加</title>
 </head>
 <body>
-    <h1>新規ユーザの追加</h1>
+    <h1>新規ユーザ追加</h1>
     {% if error %}
       <p style="color:red;">{{ error }}</p>
     {% endif %}
     <form method="POST">
-        <label>ユーザ名:
-            <input type="text" name="username" required>
-        </label><br>
-        <label>パスワード:
-            <input type="password" name="password" required>
-        </label><br>
+        <label for="username">ユーザ名:</label>
+        <input type="text" name="username" id="username" required>
+        <br>
+        <label for="password">パスワード:</label>
+        <input type="password" name="password" id="password" required>
+        <br>
         <button type="submit">追加</button>
     </form>
-    <p><a href="{{ url_for('admin') }}">戻る</a></p>
 </body>
 </html>
