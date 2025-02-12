@@ -7,15 +7,13 @@ from flask_login import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# 管理者用定数
 ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
-# 環境変数からSECRET_KEYを取得（Renderや他の環境で設定）
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 
-# PostgreSQL接続情報を環境変数から取得、または直接記述
+# PostgreSQL接続例。環境変数などに合わせて設定してください
 db_host = os.environ.get('DB_HOST', 'localhost')
 db_name = os.environ.get('DB_NAME', 'jizen')
 db_port = os.environ.get('DB_PORT', '5432')
@@ -31,14 +29,37 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# ユーザモデル（テーブル名を 'users' として定義）
+# ユーザモデル
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
-
+    
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    # 施行パートナー、担当者とのリレーション
+    partners = db.relationship('Partner', backref='owner', lazy=True)
+    staffs = db.relationship('Staff', backref='owner', lazy=True)
+
+# 施行パートナー(下請け・協力業者)モデル
+class Partner(db.Model):
+    __tablename__ = 'partners'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    company_name = db.Column(db.String(200), nullable=False)
+    representative = db.Column(db.String(200))   # 代表者
+    phone_number = db.Column(db.String(20))
+
+# 担当者モデル
+class Staff(db.Model):
+    __tablename__ = 'staffs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    staff_name = db.Column(db.String(200), nullable=False)
+    # 必要に応じて担当者種別や石綿有資格者情報などを追加
+    # ここでは簡略化
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -48,115 +69,97 @@ def load_user(user_id):
 def create_tables():
     db.create_all()
 
-@app.route('/')
-def index():
-    return render_template('index.html')
+# （ログイン、ログアウト、管理画面などのルートは省略/前述通りとする）
 
-# ログインページ
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    error = None
-    if request.method == 'POST':
-        uname = request.form.get('username', '').strip()
-        pw = request.form.get('password', '').strip()
-
-        # 管理者ログイン
-        if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
-            admin = User.query.filter_by(username=ADMIN_USERNAME).first()
-            if not admin:
-                # 管理者ユーザが存在しなければ作成
-                admin = User(
-                    username=ADMIN_USERNAME,
-                    password=generate_password_hash(ADMIN_PASSWORD),
-                    is_admin=True
-                )
-                db.session.add(admin)
-                db.session.commit()
-            login_user(admin)
-            flash("管理者としてログインしました", "success")
-            return redirect(url_for('admin'))
-
-        # 一般ユーザログイン
-        user = User.query.filter_by(username=uname).first()
-        if user and check_password_hash(user.password, pw):
-            login_user(user)
-            flash("ログインしました", "success")
-            return redirect(url_for('user_page', username=user.username))
-        else:
-            error = "ユーザ名またはパスワードが間違っています。"
-    return render_template('login.html', error=error)
-
-@app.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    flash("ログアウトしました", "info")
-    return redirect(url_for('index'))
-
-# 管理画面（管理者のみ）
-@app.route('/admin')
-@login_required
-def admin():
-    if not current_user.is_admin:
-        return "権限がありません", 403
-    # ここでユーザ一覧を取得し、テンプレートに渡す
-    users = User.query.all()
-    return render_template('admin.html', users=users)
-
-# 管理画面：新規ユーザ追加
-@app.route('/admin/add_user', methods=['GET', 'POST'])
-@login_required
-def add_user():
-    if not current_user.is_admin:
-        return "権限がありません", 403
-    error = None
-    if request.method == 'POST':
-        uname = request.form.get('username', '').strip()
-        pw = request.form.get('password', '').strip()
-        # 既存ユーザと重複していないか確認
-        if User.query.filter_by(username=uname).first():
-            error = "そのユーザ名は既に使われています。"
-        else:
-            new_user = User(
-                username=uname,
-                password=generate_password_hash(pw),
-                is_admin=False
-            )
-            db.session.add(new_user)
-            db.session.commit()
-            flash("ユーザが追加されました", "success")
-            return redirect(url_for('admin'))
-    return render_template('add_user.html', error=error)
-
-# 管理画面：ユーザ削除
-@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
-@login_required
-def delete_user(user_id):
-    if not current_user.is_admin:
-        return "権限がありません", 403
-    user_to_delete = User.query.get(user_id)
-    if not user_to_delete:
-        flash("削除対象のユーザが見つかりません", "warning")
-        return redirect(url_for('admin'))
-    if user_to_delete.username == ADMIN_USERNAME:
-        flash("管理者ユーザは削除できません", "danger")
-        return redirect(url_for('admin'))
-    db.session.delete(user_to_delete)
-    db.session.commit()
-    flash("ユーザが削除されました", "success")
-    return redirect(url_for('admin'))
-
-# ユーザページ
+########################
+#    ユーザページ      #
+########################
 @app.route('/user/<username>')
 @login_required
 def user_page(username):
+    """ユーザページ: 4つのタブ
+       (1) 施行パートナー一覧
+       (2) 施行パートナー登録
+       (3) 担当者一覧
+       (4) 担当者登録
+    """
     user = User.query.filter_by(username=username).first()
     if not user:
         return "ユーザが見つかりません", 404
-    # 管理者は全ユーザページにアクセス可、通常ユーザは自分のページのみ
+    # 管理者は全ユーザページにアクセス可。通常ユーザは自分だけ
     if not current_user.is_admin and user.username != current_user.username:
         return "他のユーザのページにはアクセスできません", 403
-    return render_template('user_page.html', user=user)
+
+    # 施行パートナー一覧を取得
+    partners = Partner.query.filter_by(user_id=user.id).all()
+    # 担当者一覧を取得
+    staffs = Staff.query.filter_by(user_id=user.id).all()
+
+    return render_template(
+        'user_page.html',
+        user=user,
+        partners=partners,
+        staffs=staffs
+    )
+
+########################
+#  施行パートナー登録  #
+########################
+@app.route('/user/<username>/partner/add', methods=['GET', 'POST'])
+@login_required
+def add_partner(username):
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return "ユーザが見つかりません", 404
+    # 管理者 or ユーザ本人のみ登録可
+    if not current_user.is_admin and user.username != current_user.username:
+        return "他のユーザのページにはアクセスできません", 403
+    
+    if request.method == 'POST':
+        company_name = request.form.get('company_name', '').strip()
+        representative = request.form.get('representative', '')
+        phone_number = request.form.get('phone_number', '')
+
+        new_partner = Partner(
+            user_id=user.id,
+            company_name=company_name,
+            representative=representative,
+            phone_number=phone_number
+        )
+        db.session.add(new_partner)
+        db.session.commit()
+        flash("施行パートナーが登録されました", "success")
+        # 登録後はユーザページに戻り、一覧に表示
+        return redirect(url_for('user_page', username=user.username))
+
+    return render_template('add_partner.html', user=user)
+
+########################
+#     担当者登録       #
+########################
+@app.route('/user/<username>/staff/add', methods=['GET', 'POST'])
+@login_required
+def add_staff(username):
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return "ユーザが見つかりません", 404
+    # 管理者 or ユーザ本人のみ登録可
+    if not current_user.is_admin and user.username != current_user.username:
+        return "他のユーザのページにはアクセスできません", 403
+    
+    if request.method == 'POST':
+        staff_name = request.form.get('staff_name', '').strip()
+        new_staff = Staff(
+            user_id=user.id,
+            staff_name=staff_name,
+        )
+        db.session.add(new_staff)
+        db.session.commit()
+        flash("担当者が登録されました", "success")
+        # 登録後はユーザページに戻り、担当者一覧に表示
+        return redirect(url_for('user_page', username=user.username))
+
+    return render_template('add_staff.html', user=user)
 
 if __name__ == '__main__':
     app.run(debug=True)
