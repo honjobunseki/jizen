@@ -3,62 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>管理画面</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
-    <div class="container mt-4">
-        <h1 class="mb-4">管理画面</h1>
-        
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h2 class="mb-0">ユーザー管理</h2>
-                <a href="{{ url_for('add_user') }}" class="btn btn-primary">新規ユーザー追加</a>
-            </div>
-            <div class="card-body">
-                <div class="list-group">
-                    {% for user in users %}
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h5 class="mb-1">{{ user.username }}</h5>
-                                    {% if user.is_admin %}
-                                        <span class="badge badge-primary">管理者</span>
-                                    {% endif %}
-                                </div>
-                                <div>
-                                    <a href="{{ url_for('user_page', username=user.username) }}" 
-                                       class="btn btn-info btn-sm">ユーザーページ</a>
-                                    {% if not user.is_admin %}
-                                        <form action="{{ url_for('delete_user', user_id=user.id) }}" 
-                                              method="POST" 
-                                              style="display: inline;">
-                                            <button type="submit" 
-                                                    class="btn btn-danger btn-sm" 
-                                                    onclick="return confirm('本当に削除しますか？')">
-                                                削除
-                                            </button>
-                                        </form>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <a href="{{ url_for('logout') }}" class="btn btn-secondary">ログアウト</a>
-    </div>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <h1>管理画面</h1>
+    <p>管理者としてログインしています。</p>
+    <p><a href="{{ url_for('logout') }}">ログアウト</a></p>
+    <!-- 管理者専用の機能（ユーザ追加・削除など）をここに実装可能 -->
 </body>
 </html>
