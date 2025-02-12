@@ -3,17 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <title>管理画面</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
-    <h1>管理画面</h1>
-    <p><a href="{{ url_for('add_user') }}">ユーザ追加</a></p>
-    <ul>
-      {% for user in users %}
-        <li>
-            {{ user.username }} - <a href="{{ url_for('user_page', username=user.username) }}">ユーザページへ</a>
-        </li>
-      {% endfor %}
-    </ul>
-    <p><a href="{{ url_for('logout') }}">ログアウト</a></p>
+    <div class="container mt-4">
+        <h1>管理画面</h1>
+        
+        <!-- フラッシュメッセージ -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <p><a href="{{ url_for('add_user') }}" class="btn btn-primary mb-3">ユーザ追加</a></p>
+        
+        <!-- ユーザーリスト -->
+        <div class="list-group">
+            {% for user in users %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>{{ user.username }}</span>
+                        <div>
+                            <a href="{{ url_for('user_page', username=user.username) }}" class="btn btn-info btn-sm">ユーザページへ</a>
+                            {% if user.username != 'honjobunseki' %}
+                                <form action="{{ url_for('delete_user', user_id=user.id) }}" method="POST" style="display: inline;">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('本当に削除しますか？')">削除</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <p class="mt-3"><a href="{{ url_for('logout') }}" class="btn btn-secondary">ログアウト</a></p>
+
+        <!-- デバッグ情報 -->
+        {% if debug_info %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h3 class="card-title">デバッグ情報</h3>
+                </div>
+                <div class="card-body">
+                    {% for section, data in debug_info.items() %}
+                        <div class="mb-3">
+                            <strong>{{ section }}:</strong>
+                            {% if data is mapping %}
+                                <ul class="list-unstyled ml-3">
+                                {% for key, value in data.items() %}
+                                    <li><em>{{ key }}:</em> {{ value }}</li>
+                                {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p>{{ data }}</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Bootstrap JS と jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
