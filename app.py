@@ -25,7 +25,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    # 施行パートナー情報（既存）
+    # 施行パートナー情報
     partners = db.relationship('Partner', backref='owner', lazy=True)
     # 担当者情報（Staff）のリレーション
     staffs = db.relationship('Staff', backref='owner', lazy=True)
@@ -79,10 +79,11 @@ def index():
 def login():
     error = None
     if request.method == 'POST':
+        # 入力値の前後空白を除去
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
         
-        # 管理者としてログインする場合
+        # 管理者としてログインする場合のチェック
         if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if not admin:
@@ -97,7 +98,7 @@ def login():
             flash("管理者としてログインしました", "success")
             return redirect(url_for('admin'))
         
-        # 通常ユーザのログイン処理
+        # 通常ユーザとしてのログイン処理
         user = User.query.filter_by(username=uname).first()
         if user and check_password_hash(user.password, pw):
             login_user(user)
@@ -123,49 +124,6 @@ def admin():
     users = User.query.all()
     return render_template('admin.html', users=users)
 
-# 管理画面：新規ユーザ追加
-@app.route('/admin/add_user', methods=['GET', 'POST'])
-@login_required
-def add_user():
-    if not current_user.is_admin:
-        return "権限がありません", 403
-    error = None
-    if request.method == 'POST':
-        uname = request.form.get('username', '').strip()
-        pw = request.form.get('password', '').strip()
-        if User.query.filter_by(username=uname).first():
-            error = "そのユーザ名は既に使われています。"
-        else:
-            new_user = User(
-                username=uname,
-                password=generate_password_hash(pw),
-                is_admin=False
-            )
-            db.session.add(new_user)
-            db.session.commit()
-            flash("ユーザが追加されました", "success")
-            return redirect(url_for('admin'))
-    return render_template('add_user.html', error=error)
-
-# 管理画面：ユーザ削除
-@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
-@login_required
-def delete_user(user_id):
-    if not current_user.is_admin:
-        return "権限がありません", 403
-    # 管理者自身は削除させない
-    user_to_delete = User.query.get(user_id)
-    if not user_to_delete:
-        flash("削除対象のユーザが見つかりません", "warning")
-        return redirect(url_for('admin'))
-    if user_to_delete.username == ADMIN_USERNAME:
-        flash("管理者ユーザは削除できません", "danger")
-        return redirect(url_for('admin'))
-    db.session.delete(user_to_delete)
-    db.session.commit()
-    flash("ユーザが削除されました", "success")
-    return redirect(url_for('admin'))
-
 # ユーザごとのページ
 @app.route('/user/<username>')
 @login_required
@@ -173,8 +131,16 @@ def user_page(username):
     user = User.query.filter_by(username=username).first()
     if not user:
         return "ユーザが見つかりません", 404
-    if user.username != current_user.username and not current_user.is_admin:
+
+    # 管理者ならどのユーザページにもアクセス可能
+    # 通常ユーザは自分のページにのみアクセス可能
+    if not current_user.is_admin and user.username != current_user.username:
         return "他のユーザのページにはアクセスできません", 403
+
+    # デバッグ出力：現在のログインユーザ情報を表示（必要に応じてコメントアウト）
+    print(f"Requested user page: {username}")
+    print(f"Current user: {current_user.username}, is_admin: {current_user.is_admin}")
+
     partners = Partner.query.filter_by(user_id=user.id).all()
     staffs = Staff.query.filter_by(user_id=user.id).all()
     return render_template('user_page.html', user=user, partners=partners, staffs=staffs)
@@ -186,7 +152,7 @@ def add_staff(username):
     user = User.query.filter_by(username=username).first()
     if not user:
         return "ユーザが見つかりません", 404
-    if user.username != current_user.username and not current_user.is_admin:
+    if not current_user.is_admin and user.username != current_user.username:
         return "他のユーザのページにはアクセスできません", 403
     
     if request.method == 'POST':
