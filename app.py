@@ -114,10 +114,28 @@ def logout():
 @app.route('/admin')
 @login_required
 def admin():
+    # デバッグ情報を収集
+    debug_info = {
+        "リクエスト情報": {
+            "現在のユーザーID": current_user.id if current_user.is_authenticated else None,
+            "現在のユーザー名": current_user.username if current_user.is_authenticated else None,
+            "管理者権限": current_user.is_admin if current_user.is_authenticated else None
+        }
+    }
+    
     if not current_user.is_admin:
-        return "権限がありません", 403
-    users = User.query.all()
-    return render_template('admin.html', users=users)
+        debug_info["エラー"] = "管理者権限がありません"
+        return render_template('error.html', debug_info=debug_info), 403
+    
+    try:
+        users = User.query.all()
+        debug_info["取得データ"] = {
+            "ユーザー数": len(users) if users else 0
+        }
+        return render_template('admin.html', users=users, debug_info=debug_info)
+    except Exception as e:
+        debug_info["エラー"] = str(e)
+        return render_template('error.html', debug_info=debug_info), 500
 
 @app.route('/user/<username>')
 @login_required
