@@ -1,121 +1,12 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>{{ user.username }} さんのページ</title>
-  <!-- Bootstrap CSS (CDN) -->
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <!-- jQuery と Bootstrap JS (CDN) -->
-  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <meta charset="UTF-8">
+    <title>{{ user.username }} のユーザページ</title>
 </head>
 <body>
-  <div class="container mt-4">
-    <h1>{{ user.username }} さんのページ</h1>
-    
-    <!-- タブナビゲーション -->
-    <ul class="nav nav-tabs" id="userPageTab" role="tablist">
-      <!-- 施行パートナー一覧タブ -->
-      <li class="nav-item">
-        <a class="nav-link active" id="partner-list-tab" data-toggle="tab" href="#partner-list" role="tab" aria-controls="partner-list" aria-selected="true">
-          施行パートナー一覧
-        </a>
-      </li>
-      <!-- 施行パートナー登録タブ -->
-      <li class="nav-item">
-        <a class="nav-link" id="partner-add-tab" data-toggle="tab" href="#partner-add" role="tab" aria-controls="partner-add" aria-selected="false">
-          施行パートナー（下請け・協力業者）登録
-        </a>
-      </li>
-      <!-- 担当者一覧タブ -->
-      <li class="nav-item">
-        <a class="nav-link" id="staff-list-tab" data-toggle="tab" href="#staff-list" role="tab" aria-controls="staff-list" aria-selected="false">
-          担当者一覧
-        </a>
-      </li>
-      <!-- 担当者登録タブ -->
-      <li class="nav-item">
-        <a class="nav-link" id="staff-add-tab" data-toggle="tab" href="#staff-add" role="tab" aria-controls="staff-add" aria-selected="false">
-          担当者登録
-        </a>
-      </li>
-    </ul>
-
-    <!-- タブコンテンツ -->
-    <div class="tab-content mt-3" id="userPageTabContent">
-      <!-- 施行パートナー一覧タブの内容 -->
-      <div class="tab-pane fade show active" id="partner-list" role="tabpanel" aria-labelledby="partner-list-tab">
-        <h2>施行パートナー一覧</h2>
-        <ul class="list-group">
-          {% for partner in partners %}
-            <li class="list-group-item">
-              <strong>業者名:</strong> {{ partner.company_name }}<br>
-              <strong>代表者:</strong> {{ partner.representative or '未入力' }}<br>
-              <strong>電話番号:</strong> {{ partner.phone_number }}<br>
-              <!-- その他必要な項目 -->
-            </li>
-          {% else %}
-            <li class="list-group-item">まだ施行パートナーが登録されていません</li>
-          {% endfor %}
-        </ul>
-      </div>
-      
-      <!-- 施行パートナー登録タブの内容 -->
-      <div class="tab-pane fade" id="partner-add" role="tabpanel" aria-labelledby="partner-add-tab">
-        <h2>施行パートナー（下請け・協力業者）登録</h2>
-        <!-- 登録フォームへのリンクまたはフォームそのもの -->
-        <p>
-          <a href="{{ url_for('add_partner', username=user.username) }}" class="btn btn-primary">
-            登録フォームへ
-          </a>
-        </p>
-      </div>
-      
-      <!-- 担当者一覧タブの内容 -->
-      <div class="tab-pane fade" id="staff-list" role="tabpanel" aria-labelledby="staff-list-tab">
-        <h2>担当者一覧</h2>
-        <ul class="list-group">
-          {% for staff in staffs %}
-            <li class="list-group-item">
-              <strong>担当者氏名:</strong> {{ staff.staff_name }}<br>
-              <strong>業者種別:</strong> {{ staff.vendor_type }}<br>
-              <!-- 担当者種別や資格の情報を必要に応じて表示 -->
-              {% if staff.is_asbestos_qualified %}
-                <em>石綿有資格者</em>
-              {% endif %}
-            </li>
-          {% else %}
-            <li class="list-group-item">まだ担当者が登録されていません</li>
-          {% endfor %}
-        </ul>
-      </div>
-      
-      <!-- 担当者登録タブの内容 -->
-      <div class="tab-pane fade" id="staff-add" role="tabpanel" aria-labelledby="staff-add-tab">
-        <!-- 担当者登録フォーム（add_staff.html へのインクルードまたは直接記述） -->
-        {% include "add_staff.html" %}
-      </div>
-    </div>
-  </div>
-  <!-- user_page.htmlの内容の最後に追加 -->
-{% if debug_info %}
-    <div style="margin-top: 50px; padding: 20px; background: #f8f9fa; border: 1px solid #ddd;">
-        <h3>デバッグ情報</h3>
-        {% for section, data in debug_info.items() %}
-            <div style="margin-bottom: 15px;">
-                <strong>{{ section }}:</strong>
-                {% if data is mapping %}
-                    <ul>
-                    {% for key, value in data.items() %}
-                        <li>{{ key }}: {{ value }}</li>
-                    {% endfor %}
-                    </ul>
-                {% else %}
-                    <p>{{ data }}</p>
-                {% endif %}
-            </div>
-        {% endfor %}
-    </div>
-{% endif %}
+    <h1>{{ user.username }} のユーザページ</h1>
+    <p><a href="{{ url_for('logout') }}">ログアウト</a></p>
+    <!-- ユーザページとして必要な情報やリンクを追加可能 -->
 </body>
 </html>
