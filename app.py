@@ -1,4 +1,3 @@
-import os
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
@@ -6,32 +5,36 @@ from flask_login import (
     current_user, UserMixin
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
 
 # 管理者用定数
 ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
-
-# 環境変数からSECRET_KEYを取得
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 
-# 環境変数からPostgreSQL接続情報を取得し、接続文字列を生成
+# PostgreSQLへの接続設定（例：Renderの環境変数を使用）
 db_host = os.environ.get('DB_HOST', 'localhost')
 db_name = os.environ.get('DB_NAME', 'jizen')
 db_port = os.environ.get('DB_PORT', '5432')
 db_user = os.environ.get('DB_USER', 'jizen_user')
 db_password = os.environ.get('DB_PASSWORD', '')
 
-app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+app.config['SQLALCHEMY_DATABASE_URI'] = (
+    f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+)
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-
+# テーブル名を明示的に変更：__tablename__ = 'users'
 class User(UserMixin, db.Model):
+    __tablename__ = 'users'
+    
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
@@ -60,7 +63,6 @@ def login():
         if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if not admin:
-                # 管理者ユーザが存在しなければ自動作成
                 admin = User(
                     username=ADMIN_USERNAME,
                     password=generate_password_hash(ADMIN_PASSWORD),
@@ -89,7 +91,7 @@ def logout():
     flash("ログアウトしました", "info")
     return redirect(url_for('index'))
 
-# 管理画面（管理者のみアクセス可能）
+# 管理画面（管理者のみ）
 @app.route('/admin')
 @login_required
 def admin():
@@ -97,7 +99,7 @@ def admin():
         return "権限がありません", 403
     return render_template('admin.html')
 
-# 管理画面：新規ユーザ追加
+# 新規ユーザ追加
 @app.route('/admin/add_user', methods=['GET', 'POST'])
 @login_required
 def add_user():
@@ -121,7 +123,7 @@ def add_user():
             return redirect(url_for('admin'))
     return render_template('add_user.html', error=error)
 
-# 管理画面：ユーザ削除
+# ユーザ削除
 @app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 def delete_user(user_id):
