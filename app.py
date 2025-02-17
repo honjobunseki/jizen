@@ -12,14 +12,15 @@ ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
+# Render等の環境変数で設定しているSECRET_KEYを使用
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 
-# PostgreSQL接続情報（Renderの環境変数を利用する場合）
-db_host = os.environ.get('DB_HOST', 'localhost')
+# PostgreSQL接続情報（環境変数または直接設定）
+db_host = os.environ.get('DB_HOST', 'dpg-cuisfvin91rc73bmn8pg-a.oregon-postgres.render.com')
 db_name = os.environ.get('DB_NAME', 'jizen')
 db_port = os.environ.get('DB_PORT', '5432')
 db_user = os.environ.get('DB_USER', 'jizen_user')
-db_password = os.environ.get('DB_PASSWORD', '')
+db_password = os.environ.get('DB_PASSWORD', 'vX33zfbVI5AhvxitGnWUOC9SM5K8eoWW')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = (
     f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
@@ -35,11 +36,57 @@ login_manager.login_view = 'login'
 ########################
 
 class User(UserMixin, db.Model):
-    __tablename__ = 'users'  # テーブル名を 'users' にする
+    __tablename__ = 'users'  # PostgreSQLで予約語を避けるために 'users' にする
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    # 施行パートナー、担当者のリレーション
+    partners = db.relationship('Partner', backref='owner', lazy=True)
+    staffs = db.relationship('Staff', backref='owner', lazy=True)
+
+class Partner(db.Model):
+    __tablename__ = 'partners'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    company_name = db.Column(db.String(200), nullable=False)
+    representative = db.Column(db.String(200))
+    phone_number = db.Column(db.String(20))
+    labor_insurance_number = db.Column(db.String(100))
+    prefecture_code = db.Column(db.String(50))
+    responsibility = db.Column(db.String(50))
+    jurisdiction = db.Column(db.String(50))
+    main_number = db.Column(db.String(50))
+    branch_number = db.Column(db.String(50))
+    free_input = db.Column(db.Text)
+    postal_code = db.Column(db.String(20))
+    address_prefecture = db.Column(db.String(100))
+    address_city = db.Column(db.String(100))
+    address_town = db.Column(db.String(100))
+    address_details = db.Column(db.String(200))
+    fax_number = db.Column(db.String(20))
+
+class Staff(db.Model):
+    __tablename__ = 'staffs'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    staff_name = db.Column(db.String(200), nullable=False)
+    is_handover = db.Column(db.Boolean, default=False)
+    is_registration = db.Column(db.Boolean, default=False)
+    is_transport = db.Column(db.Boolean, default=False)
+    is_asbestos_qualified = db.Column(db.Boolean, default=False)
+    is_construction = db.Column(db.Boolean, default=False)
+    is_asbestos_chief = db.Column(db.Boolean, default=False)
+    asbestos_chief_reg_number = db.Column(db.String(100))
+    asbestos_chief_training_org = db.Column(db.String(200))
+    is_building_inspector = db.Column(db.Boolean, default=False)
+    building_inspector_reg_number = db.Column(db.String(100))
+    building_inspector_qualification = db.Column(db.String(100))
+    building_inspector_training_org = db.Column(db.String(200))
+    is_preliminary_inspector = db.Column(db.Boolean, default=False)
+    preliminary_inspector_reg_number = db.Column(db.String(100))
+    preliminary_inspector_training_org = db.Column(db.String(200))
+    email = db.Column(db.String(200))
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -64,7 +111,7 @@ def login():
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
 
-        # 管理者としてログインする場合
+        # 管理者ログイン
         if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if not admin:
@@ -79,7 +126,7 @@ def login():
             flash("管理者としてログインしました", "success")
             return redirect(url_for('admin'))
 
-        # 一般ユーザとしてログイン
+        # 一般ユーザログイン
         user = User.query.filter_by(username=uname).first()
         if user and check_password_hash(user.password, pw):
             login_user(user)
@@ -97,20 +144,16 @@ def logout():
     return redirect(url_for('index'))
 
 #################################
-#        管理画面 (admin.html)
+#         管理画面 (admin)
 #################################
 @app.route('/admin')
 @login_required
 def admin():
     if not current_user.is_admin:
         return "権限がありません", 403
-    # 全ユーザを取得してテンプレートに渡す
     all_users = User.query.all()
     return render_template('admin.html', users=all_users)
 
-#################################
-#    ユーザ追加 (add_user)
-#################################
 @app.route('/admin/add_user', methods=['GET', 'POST'])
 @login_required
 def add_user():
@@ -134,9 +177,6 @@ def add_user():
             return redirect(url_for('admin'))
     return render_template('add_user.html', error=error)
 
-#################################
-#    ユーザ削除 (delete_user)
-#################################
 @app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 def delete_user(user_id):
@@ -160,15 +200,17 @@ def delete_user(user_id):
 @app.route('/user/<username>')
 @login_required
 def user_page(username):
-    # デバッグ出力: リクエストされたユーザ名
-    print("user_page: requested username =", username)
     user = User.query.filter_by(username=username).first()
     if not user:
         return "ユーザが見つかりません", 404
-    # 管理者は全ユーザページにアクセス可能、一般ユーザは自分のページのみ
+    # 管理者は全ユーザページにアクセス可能、通常ユーザは自分のページのみアクセス可能
     if not current_user.is_admin and user.username != current_user.username:
         return "他のユーザのページにはアクセスできません", 403
-    return render_template('user_page.html', user=user)
+
+    # 施行パートナーと担当者一覧は、ここで取得（必要に応じて実装）
+    partners = []  # Partner.query.filter_by(user_id=user.id).all() ← 必要なら有効化
+    staffs = []    # Staff.query.filter_by(user_id=user.id).all() ← 必要なら有効化
+    return render_template('user_page.html', user=user, partners=partners, staffs=staffs)
 
 if __name__ == '__main__':
     app.run(debug=True)
