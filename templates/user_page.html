@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>{{ user.username }} のユーザページ</title>
-  <!-- Bootstrap CSS (CDN) -->
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <!-- jQuery と Bootstrap JS (CDN) -->
-  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <meta charset="UTF-8">
+    <title>{{ user.username }} のユーザページ</title>
+    <!-- Bootstrap (CDN) -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
 <body>
   <div class="container mt-4">
     <h1>{{ user.username }} さんのページ</h1>
 
-    <!-- タブナビゲーション -->
     <ul class="nav nav-tabs" id="userTab" role="tablist">
       <li class="nav-item">
         <a class="nav-link active" id="partners-list-tab" data-toggle="tab"
@@ -45,7 +43,6 @@
       </li>
     </ul>
 
-    <!-- タブコンテンツ -->
     <div class="tab-content mt-3" id="userTabContent">
       <!-- 施行パートナー一覧タブ -->
       <div class="tab-pane fade show active" id="partners-list" role="tabpanel"
@@ -57,7 +54,6 @@
               <strong>業者名:</strong> {{ partner.company_name }}<br>
               <strong>代表者:</strong> {{ partner.representative or '未入力' }}<br>
               <strong>電話番号:</strong> {{ partner.phone_number or '未入力' }}<br>
-              <!-- 必要に応じて追加項目も表示 -->
             </li>
           {% else %}
             <li class="list-group-item">登録された施行パートナーはありません</li>
@@ -84,8 +80,7 @@
         <ul class="list-group">
           {% for st in staffs %}
             <li class="list-group-item">
-              <strong>担当者氏名:</strong> {{ st.staff_name }}<br>
-              <!-- 追加情報があればここに表示 -->
+              <strong>担当者氏名:</strong> {{ st.staff_name }}
             </li>
           {% else %}
             <li class="list-group-item">まだ担当者が登録されていません</li>
