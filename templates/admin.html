@@ -6,24 +6,26 @@
 </head>
 <body>
     <h1>管理画面</h1>
+    <!-- 新規ユーザ追加リンク -->
     <p><a href="{{ url_for('add_user') }}">ユーザ追加</a></p>
 
-    <!-- 全てのユーザを表示 -->
+    <!-- 全ユーザ表示 -->
     <ul>
       {% for user in users %}
         <li>
-            {{ user.username }}
-            {% if user.username != 'honjobunseki' %}
-              <!-- 削除ボタンの例 -->
-              <form action="{{ url_for('delete_user', user_id=user.id) }}"
-                    method="POST" style="display:inline;">
-                <button type="submit"
-                        onclick="return confirm('本当に削除しますか？');">
-                  削除
-                </button>
-              </form>
-            {% endif %}
-            - <a href="{{ url_for('user_page', username=user.username) }}">ユーザページへ</a>
+          {{ user.username }}
+          {% if user.username != 'honjobunseki' %}
+            <!-- 削除ボタン -->
+            <form action="{{ url_for('delete_user', user_id=user.id) }}"
+                  method="POST" style="display:inline;">
+              <button type="submit" onclick="return confirm('本当に削除しますか？');">
+                削除
+              </button>
+            </form>
+          {% endif %}
+          - <a href="{{ url_for('user_page', username=user.username) }}">
+            ユーザページへ
+          </a>
         </li>
       {% endfor %}
     </ul>
