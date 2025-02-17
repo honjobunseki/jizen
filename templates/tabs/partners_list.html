@@ -1,0 +1,14 @@
+<div class="tab-pane fade show active" id="partners-list" role="tabpanel" aria-labelledby="partners-list-tab">
+  <h2>施行パートナー一覧</h2>
+  <ul class="list-group">
+    {% for partner in partners %}
+      <li class="list-group-item">
+        <strong>業者名:</strong> {{ partner.company_name }}<br>
+        <strong>代表者:</strong> {{ partner.representative or '未入力' }}<br>
+        <strong>電話番号:</strong> {{ partner.phone_number or '未入力' }}<br>
+      </li>
+    {% else %}
+      <li class="list-group-item">登録された施行パートナーはありません</li>
+    {% endfor %}
+  </ul>
+</div>
