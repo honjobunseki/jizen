@@ -6,15 +6,21 @@ from flask_login import (
     current_user, UserMixin
 )
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+
+########################
+# 設定
+########################
 
 # 管理者用定数
 ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '2x9K#mP9$vL5nX3j@pQ7wR8cY4hN6bM1zD')
+# 環境変数からSECRET_KEYを取得（Render環境などで設定済みの場合）
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 
-# PostgreSQL接続情報（Render環境の環境変数を使用）
+# PostgreSQL接続情報（環境変数または直接設定）
 db_host = os.environ.get('DB_HOST', 'dpg-cuisfvin91rc73bmn8pg-a.oregon-postgres.render.com')
 db_name = os.environ.get('DB_NAME', 'jizen')
 db_port = os.environ.get('DB_PORT', '5432')
@@ -23,6 +29,16 @@ db_password = os.environ.get('DB_PASSWORD', 'vX33zfbVI5AhvxitGnWUOC9SM5K8eoWW')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# アップロード設定
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 4096 * 1024  # 4096KB (約4MB)
+ALLOWED_EXTENSIONS = {'pdf'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -33,11 +49,12 @@ login_manager.login_view = 'login'
 ########################
 
 class User(UserMixin, db.Model):
-    __tablename__ = 'users'  # テーブル名を 'users' にして予約語を避ける
+    __tablename__ = 'users'  # 予約語 'user' を避けるため 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    # リレーション
     partners = db.relationship('Partner', backref='owner', lazy=True)
     staffs = db.relationship('Staff', backref='owner', lazy=True)
 
@@ -83,6 +100,9 @@ class Staff(db.Model):
     preliminary_inspector_reg_number = db.Column(db.String(100))
     preliminary_inspector_training_org = db.Column(db.String(200))
     email = db.Column(db.String(200))
+    # 資格証アップロード用のフィールド
+    asbestos_chief_filename = db.Column(db.String(200))
+    building_inspector_filename = db.Column(db.String(200))
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -90,7 +110,6 @@ def load_user(user_id):
 
 @app.before_first_request
 def create_tables():
-    # ★開発環境でのみ<×既存テーブルを削除してから>作成する
     db.create_all()
 
 ########################
@@ -107,6 +126,7 @@ def login():
     if request.method == 'POST':
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
+
         # 管理者ログイン
         if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
@@ -121,6 +141,7 @@ def login():
             login_user(admin)
             flash("管理者としてログインしました", "success")
             return redirect(url_for('admin'))
+
         # 一般ユーザログイン
         user = User.query.filter_by(username=uname).first()
         if user and check_password_hash(user.password, pw):
@@ -203,7 +224,10 @@ def user_page(username):
         return "他のユーザのページにはアクセスできません", 403
     partners = Partner.query.filter_by(user_id=user.id).all()
     staffs = Staff.query.filter_by(user_id=user.id).all()
-    return render_template('user_page.html', user=user, partners=partners, staffs=staffs)
+    # certificate変数：ここではstaffごとに資格証の情報が含まれているので、個別にStaffモデルのフィールドとして管理します。
+    # 例えば、アップロード済みの情報はStaffテーブルに保存されます。
+    certificate = None  # 必要に応じて処理を追加
+    return render_template('user_page.html', user=user, partners=partners, staffs=staffs, certificate=certificate)
 
 #################################
 #       施行パートナー登録 (add_partner)
@@ -280,19 +304,15 @@ def add_staff(username):
         is_transport = True if request.form.get('is_transport') == 'on' else False
         is_asbestos_qualified = True if request.form.get('is_asbestos_qualified') == 'on' else False
         is_construction = True if request.form.get('is_construction') == 'on' else False
-
         is_asbestos_chief = True if request.form.get('is_asbestos_chief') == 'on' else False
         asbestos_chief_reg_number = request.form.get('asbestos_chief_reg_number', '')
         asbestos_chief_training_org = request.form.get('asbestos_chief_training_org', '')
-
         is_building_inspector = True if request.form.get('is_building_inspector') == 'on' else False
         building_inspector_reg_number = request.form.get('building_inspector_reg_number', '')
         building_inspector_training_org = request.form.get('building_inspector_training_org', '')
-
         is_preliminary_inspector = True if request.form.get('is_preliminary_inspector') == 'on' else False
         preliminary_inspector_reg_number = request.form.get('preliminary_inspector_reg_number', '')
-        preliminary_inspector_training_org = request.form.get('preliminary_inspector_training_org', '')
-
+        preliminary_inspector_training_org = request.form.get('preliminary_inspector_training_org') or ''
         email = request.form.get('email', '')
 
         new_staff = Staff(
@@ -320,6 +340,52 @@ def add_staff(username):
         return redirect(url_for('user_page', username=user.username))
     partners = Partner.query.filter_by(user_id=user.id).all()
     return render_template('add_staff.html', user=user, partners=partners)
+
+#################################
+#       資格証アップロード (upload_certificate)
+#################################
+@app.route('/user/<username>/certificate/upload', methods=['POST'])
+@login_required
+def upload_certificate(username):
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        flash("ユーザが見つかりません", "warning")
+        return redirect(url_for('user_page', username=username))
+    if not current_user.is_admin and user.username != current_user.username:
+        flash("権限がありません", "danger")
+        return redirect(url_for('user_page', username=username))
+    
+    staff_id = request.form.get('staff_id')
+    if not staff_id:
+        flash("担当者が選択されていません", "warning")
+        return redirect(url_for('user_page', username=username))
+    
+    staff = Staff.query.get(staff_id)
+    if not staff:
+        flash("選択された担当者が見つかりません", "warning")
+        return redirect(url_for('user_page', username=username))
+    
+    # ファイルアップロード処理
+    asbestos_file = request.files.get('asbestos_chief_file')
+    building_file = request.files.get('building_inspector_file')
+    
+    if asbestos_file and allowed_file(asbestos_file.filename):
+        filename1 = secure_filename(asbestos_file.filename)
+        asbestos_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename1))
+        staff.asbestos_chief_filename = filename1
+    else:
+        flash("石綿作業主任者資格証のファイルアップロードに失敗しました", "warning")
+    
+    if building_file and allowed_file(building_file.filename):
+        filename2 = secure_filename(building_file.filename)
+        building_file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename2))
+        staff.building_inspector_filename = filename2
+    else:
+        flash("建築物石綿含有建材調査者資格証のファイルアップロードに失敗しました", "warning")
+    
+    db.session.commit()
+    flash("資格証がアップロードされました", "success")
+    return redirect(url_for('user_page', username=username))
 
 if __name__ == '__main__':
     app.run(debug=True)
