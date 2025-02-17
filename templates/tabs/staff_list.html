@@ -1,0 +1,12 @@
+<div class="tab-pane fade" id="staff-list" role="tabpanel" aria-labelledby="staff-list-tab">
+  <h2>担当者一覧</h2>
+  <ul class="list-group">
+    {% for st in staffs %}
+      <li class="list-group-item">
+        <strong>担当者氏名:</strong> {{ st.staff_name }}
+      </li>
+    {% else %}
+      <li class="list-group-item">まだ担当者が登録されていません</li>
+    {% endfor %}
+  </ul>
+</div>
