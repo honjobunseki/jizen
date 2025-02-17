@@ -12,9 +12,9 @@ ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback_secret_key')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '2x9K#mP9$vL5nX3j@pQ7wR8cY4hN6bM1zD')
 
-# PostgreSQL接続情報（Render環境の環境変数を使用する例）
+# PostgreSQL接続情報（Render環境の環境変数を使用）
 db_host = os.environ.get('DB_HOST', 'dpg-cuisfvin91rc73bmn8pg-a.oregon-postgres.render.com')
 db_name = os.environ.get('DB_NAME', 'jizen')
 db_port = os.environ.get('DB_PORT', '5432')
@@ -33,12 +33,11 @@ login_manager.login_view = 'login'
 ########################
 
 class User(UserMixin, db.Model):
-    __tablename__ = 'users'  # 予約語を避けるために明示的に指定
+    __tablename__ = 'users'  # テーブル名を 'users' にして予約語を避ける
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    # ユーザページで利用するリレーション（必要に応じて拡張）
     partners = db.relationship('Partner', backref='owner', lazy=True)
     staffs = db.relationship('Staff', backref='owner', lazy=True)
 
@@ -91,6 +90,8 @@ def load_user(user_id):
 
 @app.before_first_request
 def create_tables():
+    # ★開発環境でのみ既存テーブルを削除してから作成する
+    db.drop_all()
     db.create_all()
 
 ########################
@@ -107,7 +108,6 @@ def login():
     if request.method == 'POST':
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
-
         # 管理者ログイン
         if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
@@ -122,7 +122,6 @@ def login():
             login_user(admin)
             flash("管理者としてログインしました", "success")
             return redirect(url_for('admin'))
-
         # 一般ユーザログイン
         user = User.query.filter_by(username=uname).first()
         if user and check_password_hash(user.password, pw):
@@ -197,15 +196,12 @@ def delete_user(user_id):
 @app.route('/user/<username>')
 @login_required
 def user_page(username):
-    print("user_page: requested username =", username)  # デバッグ出力
+    print("user_page: requested username =", username)
     user = User.query.filter_by(username=username).first()
     if not user:
         return "ユーザが見つかりません", 404
-    # 管理者は全ユーザページにアクセス可能、通常ユーザは自分のページのみ
     if not current_user.is_admin and user.username != current_user.username:
         return "他のユーザのページにはアクセスできません", 403
-
-    # 施行パートナーと担当者の一覧は、必要なら取得（ここでは例として空リスト）
     partners = Partner.query.filter_by(user_id=user.id).all()
     staffs = Staff.query.filter_by(user_id=user.id).all()
     return render_template('user_page.html', user=user, partners=partners, staffs=staffs)
@@ -221,7 +217,6 @@ def add_partner(username):
         return "ユーザが見つかりません", 404
     if not current_user.is_admin and user.username != current_user.username:
         return "他のユーザのページにはアクセスできません", 403
-
     if request.method == 'POST':
         company_name = request.form.get('company_name', '').strip()
         representative = request.form.get('representative', '')
@@ -279,7 +274,6 @@ def add_staff(username):
         return "ユーザが見つかりません", 404
     if not current_user.is_admin and user.username != current_user.username:
         return "他のユーザのページにはアクセスできません", 403
-
     if request.method == 'POST':
         staff_name = request.form.get('staff_name', '')
         is_handover = True if request.form.get('is_handover') == 'on' else False
