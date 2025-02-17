@@ -7,25 +7,23 @@ from flask_login import (
 )
 from werkzeug.security import generate_password_hash, check_password_hash
 
-#####################################
-#     管理者用の定数 (ID/PW)         #
-#####################################
+########################
+# 管理者ID・パスワード
+########################
 ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
-
-# Renderなどの環境変数からSECRET_KEYを取得
+# Render等でSECRET_KEYを環境変数に設定している場合
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 
-# PostgreSQL 接続設定 (DB名: jizen)
+# PostgreSQLの接続情報 (環境変数を利用、無ければデフォルト)
 db_host = os.environ.get('DB_HOST', 'localhost')
 db_name = os.environ.get('DB_NAME', 'jizen')
 db_port = os.environ.get('DB_PORT', '5432')
 db_user = os.environ.get('DB_USER', 'jizen_user')
 db_password = os.environ.get('DB_PASSWORD', '')
 
-# 接続文字列を組み立て
 app.config['SQLALCHEMY_DATABASE_URI'] = (
     f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 )
@@ -35,70 +33,20 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-#####################################
-#  モデル定義 (users, partners, staffs)
-#####################################
+########################
+#       モデル定義
+########################
 
 class User(UserMixin, db.Model):
-    __tablename__ = 'users'  # テーブル名を 'users' に変更
+    __tablename__ = 'users'  # テーブル名を明示的に指定
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
 
-    # リレーション
-    partners = db.relationship('Partner', backref='owner', lazy=True)
-    staffs = db.relationship('Staff', backref='owner', lazy=True)
-
-class Partner(db.Model):
-    __tablename__ = 'partners'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    company_name = db.Column(db.String(200), nullable=False)
-    representative = db.Column(db.String(200))
-    phone_number = db.Column(db.String(20))
-    # 省略している追加項目
-    labor_insurance_number = db.Column(db.String(100))
-    prefecture_code = db.Column(db.String(50))
-    responsibility = db.Column(db.String(50))
-    jurisdiction = db.Column(db.String(50))
-    main_number = db.Column(db.String(50))
-    branch_number = db.Column(db.String(50))
-    free_input = db.Column(db.Text)
-    postal_code = db.Column(db.String(20))
-    address_prefecture = db.Column(db.String(100))
-    address_city = db.Column(db.String(100))
-    address_town = db.Column(db.String(100))
-    address_details = db.Column(db.String(200))
-    fax_number = db.Column(db.String(20))
-
-class Staff(db.Model):
-    __tablename__ = 'staffs'
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    staff_name = db.Column(db.String(200), nullable=False)
-    # 省略している担当者種別
-    is_handover = db.Column(db.Boolean, default=False)
-    is_registration = db.Column(db.Boolean, default=False)
-    is_transport = db.Column(db.Boolean, default=False)
-    is_asbestos_qualified = db.Column(db.Boolean, default=False)
-    is_construction = db.Column(db.Boolean, default=False)
-    # 石綿有資格
-    is_asbestos_chief = db.Column(db.Boolean, default=False)
-    asbestos_chief_reg_number = db.Column(db.String(100))
-    asbestos_chief_training_org = db.Column(db.String(200))
-
-    is_building_inspector = db.Column(db.Boolean, default=False)
-    building_inspector_reg_number = db.Column(db.String(100))
-    building_inspector_qualification = db.Column(db.String(100))
-    building_inspector_training_org = db.Column(db.String(200))
-
-    is_preliminary_inspector = db.Column(db.Boolean, default=False)
-    preliminary_inspector_reg_number = db.Column(db.String(100))
-    preliminary_inspector_training_org = db.Column(db.String(200))
-
-    email = db.Column(db.String(200))
-
+    # 下記はユーザページで利用するリレーション例(任意)
+    # partners = db.relationship('Partner', backref='owner', lazy=True)
+    # staffs = db.relationship('Staff', backref='owner', lazy=True)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -106,21 +54,21 @@ def load_user(user_id):
 
 @app.before_first_request
 def create_tables():
+    """初回アクセス時にテーブルを自動作成。"""
     db.create_all()
 
-##########################
-#       ルート定義       #
-##########################
+########################
+#       ルート
+########################
 
 @app.route('/')
 def index():
+    """トップページ"""
     return render_template('index.html')
 
-#################################
-#        ログイン処理
-#################################
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """ログインページ。管理者 or 一般ユーザを判定。"""
     error = None
     if request.method == 'POST':
         uname = request.form.get('username', '').strip()
@@ -130,7 +78,7 @@ def login():
         if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if not admin:
-                # 管理者ユーザが存在しなければ作成
+                # 管理者ユーザが存在しなければ作成する
                 admin = User(
                     username=ADMIN_USERNAME,
                     password=generate_password_hash(ADMIN_PASSWORD),
@@ -155,34 +103,37 @@ def login():
 @app.route('/logout')
 @login_required
 def logout():
+    """ログアウト"""
     logout_user()
     flash("ログアウトしました", "info")
     return redirect(url_for('index'))
 
-#################################
-#       管理画面（admin.html）
-#################################
+########################
+#  管理画面 (admin)
+########################
 @app.route('/admin')
 @login_required
 def admin():
-    """管理画面: ユーザ追加、削除など"""
+    """管理画面: 全ユーザを表示 & ユーザ追加・削除画面へ遷移など。"""
     if not current_user.is_admin:
         return "権限がありません", 403
-    return render_template('admin.html')
 
-#################################
-#  管理画面：ユーザ追加 (add_user)
-#################################
+    # 全ユーザを取得しテンプレートへ
+    all_users = User.query.all()
+    return render_template('admin.html', users=all_users)
+
 @app.route('/admin/add_user', methods=['GET', 'POST'])
 @login_required
 def add_user():
+    """新規ユーザ追加フォーム"""
     if not current_user.is_admin:
         return "権限がありません", 403
+
     error = None
     if request.method == 'POST':
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
-        # ユーザ名重複チェック
+        # 既存ユーザ名と重複があればエラー
         if User.query.filter_by(username=uname).first():
             error = "そのユーザ名は既に使われています。"
         else:
@@ -195,16 +146,16 @@ def add_user():
             db.session.commit()
             flash("ユーザが追加されました", "success")
             return redirect(url_for('admin'))
+
     return render_template('add_user.html', error=error)
 
-#################################
-#  管理画面：ユーザ削除
-#################################
 @app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 def delete_user(user_id):
+    """ユーザ削除。管理者自身は削除不可。"""
     if not current_user.is_admin:
         return "権限がありません", 403
+
     user_to_delete = User.query.get(user_id)
     if not user_to_delete:
         flash("削除対象のユーザが見つかりません", "warning")
@@ -212,163 +163,30 @@ def delete_user(user_id):
     if user_to_delete.username == ADMIN_USERNAME:
         flash("管理者ユーザは削除できません", "danger")
         return redirect(url_for('admin'))
+
     db.session.delete(user_to_delete)
     db.session.commit()
     flash("ユーザが削除されました", "success")
     return redirect(url_for('admin'))
 
-#################################
-#   ユーザページ (タブ構成)
-#################################
+########################
+#    ユーザページ
+########################
 @app.route('/user/<username>')
 @login_required
 def user_page(username):
-    """ユーザページ: 施行パートナー一覧/登録, 担当者一覧/登録のタブ"""
-    user = User.query.filter_by(username=username).first()
-    if not user:
-        return "ユーザが見つかりません", 404
-    # 管理者は全ユーザページOK, 一般ユーザは自分のみ
-    if not current_user.is_admin and user.username != current_user.username:
-        return "他のユーザのページにはアクセスできません", 403
-
-    partners = Partner.query.filter_by(user_id=user.id).all()
-    staffs = Staff.query.filter_by(user_id=user.id).all()
-    return render_template(
-        'user_page.html',
-        user=user,
-        partners=partners,
-        staffs=staffs
-    )
-
-#################################
-#  施行パートナー登録
-#################################
-@app.route('/user/<username>/partner/add', methods=['GET', 'POST'])
-@login_required
-def add_partner(username):
+    """一般ユーザのページ。管理者なら全ユーザページ閲覧可。"""
     user = User.query.filter_by(username=username).first()
     if not user:
         return "ユーザが見つかりません", 404
     if not current_user.is_admin and user.username != current_user.username:
         return "他のユーザのページにはアクセスできません", 403
 
-    if request.method == 'POST':
-        company_name = request.form.get('company_name', '').strip()
-        representative = request.form.get('representative', '')
-        labor_insurance_number = request.form.get('labor_insurance_number', '')
-        prefecture_code = request.form.get('prefecture_code', '')
-        responsibility = request.form.get('responsibility', '')
-        jurisdiction = request.form.get('jurisdiction', '')
-        main_number = request.form.get('main_number', '')
-        branch_number = request.form.get('branch_number', '')
-        free_input = request.form.get('free_input', '')
-        postal_code = request.form.get('postal_code', '')
-        address_prefecture = request.form.get('address_prefecture', '')
-        address_city = request.form.get('address_city', '')
-        address_town = request.form.get('address_town', '')
-        address_details = request.form.get('address_details', '')
-        phone_number = request.form.get('phone_number', '')
-        fax_number = request.form.get('fax_number', '')
-        fax_same = request.form.get('fax_same')  # "on" or None
-        if fax_same == 'on':
-            fax_number = phone_number
+    # 以下のpartners, staffs などは、必要に応じて実装/表示
+    # partners = Partner.query.filter_by(user_id=user.id).all()
+    # staffs = Staff.query.filter_by(user_id=user.id).all()
 
-        new_partner = Partner(
-            user_id=user.id,
-            company_name=company_name,
-            representative=representative,
-            phone_number=phone_number,
-            labor_insurance_number=labor_insurance_number,
-            prefecture_code=prefecture_code,
-            responsibility=responsibility,
-            jurisdiction=jurisdiction,
-            main_number=main_number,
-            branch_number=branch_number,
-            free_input=free_input,
-            postal_code=postal_code,
-            address_prefecture=address_prefecture,
-            address_city=address_city,
-            address_town=address_town,
-            address_details=address_details,
-            fax_number=fax_number
-        )
-        db.session.add(new_partner)
-        db.session.commit()
-        flash("施行パートナーの登録が完了しました", "success")
-        return redirect(url_for('user_page', username=user.username))
-
-    return render_template('add_partner.html', user=user)
-
-#################################
-#  担当者登録
-#################################
-@app.route('/user/<username>/staff/add', methods=['GET', 'POST'])
-@login_required
-def add_staff(username):
-    user = User.query.filter_by(username=username).first()
-    if not user:
-        return "ユーザが見つかりません", 404
-    if not current_user.is_admin and user.username != current_user.username:
-        return "他のユーザのページにはアクセスできません", 403
-
-    if request.method == 'POST':
-        staff_name = request.form.get('staff_name', '')
-        # 担当者種別など
-        is_handover = True if request.form.get('is_handover') == 'on' else False
-        is_registration = True if request.form.get('is_registration') == 'on' else False
-        is_transport = True if request.form.get('is_transport') == 'on' else False
-        is_asbestos_qualified = True if request.form.get('is_asbestos_qualified') == 'on' else False
-        is_construction = True if request.form.get('is_construction') == 'on' else False
-
-        is_asbestos_chief = True if request.form.get('is_asbestos_chief') == 'on' else False
-        asbestos_chief_reg_number = request.form.get('asbestos_chief_reg_number', '')
-        asbestos_chief_training_org = request.form.get('asbestos_chief_training_org', '')
-
-        is_building_inspector = True if request.form.get('is_building_inspector') == 'on' else False
-        building_inspector_reg_number = request.form.get('building_inspector_reg_number', '')
-        # 省略
-        building_inspector_training_org = request.form.get('building_inspector_training_org', '')
-
-        is_preliminary_inspector = True if request.form.get('is_preliminary_inspector') == 'on' else False
-        preliminary_inspector_reg_number = request.form.get('preliminary_inspector_reg_number', '')
-        preliminary_inspector_training_org = request.form.get('preliminary_inspector_training_org', '')
-
-        email = request.form.get('email', '')
-
-        new_staff = Staff(
-            user_id=user.id,
-            staff_name=staff_name,
-            is_handover=is_handover,
-            is_registration=is_registration,
-            is_transport=is_transport,
-            is_asbestos_qualified=is_asbestos_qualified,
-            is_construction=is_construction,
-            is_asbestos_chief=is_asbestos_chief,
-            asbestos_chief_reg_number=asbestos_chief_reg_number,
-            asbestos_chief_training_org=asbestos_chief_training_org,
-            is_building_inspector=is_building_inspector,
-            building_inspector_reg_number=building_inspector_reg_number,
-            building_inspector_training_org=building_inspector_training_org,
-            is_preliminary_inspector=is_preliminary_inspector,
-            preliminary_inspector_reg_number=preliminary_inspector_reg_number,
-            preliminary_inspector_training_org=preliminary_inspector_training_org,
-            email=email
-        )
-        db.session.add(new_staff)
-        db.session.commit()
-        flash("担当者が登録されました", "success")
-        return redirect(url_for('user_page', username=user.username))
-
-    # 施行パートナー一覧をプルダウンで選択したい場合など
-    partners = Partner.query.filter_by(user_id=user.id).all()
-    return render_template('add_staff.html', user=user, partners=partners)
-
-#########################
-#   メイン起動
-#########################
-@app.route('/index')
-def fallback_index():
-    return redirect('/')
+    return render_template('user_page.html', user=user)
 
 if __name__ == '__main__':
     app.run(debug=True)
