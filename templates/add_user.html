@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>ユーザ追加</title>
+    <title>新規ユーザ追加</title>
 </head>
 <body>
     <h1>新規ユーザ追加</h1>
@@ -10,13 +10,14 @@
       <p style="color:red;">{{ error }}</p>
     {% endif %}
     <form method="POST">
-        <label for="username">ユーザ名:</label>
-        <input type="text" name="username" id="username" required>
-        <br>
-        <label for="password">パスワード:</label>
-        <input type="password" name="password" id="password" required>
-        <br>
+        <label>ユーザ名:
+            <input type="text" name="username" required>
+        </label><br>
+        <label>パスワード:
+            <input type="password" name="password" required>
+        </label><br>
         <button type="submit">追加</button>
     </form>
+    <p><a href="{{ url_for('admin') }}">戻る</a></p>
 </body>
 </html>
