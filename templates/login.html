@@ -6,15 +6,6 @@
 </head>
 <body>
     <h1>ログイン</h1>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul>
-          {% for category, message in messages %}
-            <li style="color: {% if category == 'success' %}green{% else %}red{% endif %};">{{ message }}</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
     {% if error %}
       <p style="color:red;">{{ error }}</p>
     {% endif %}
