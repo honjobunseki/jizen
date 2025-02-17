@@ -1,0 +1,89 @@
+<!-- _user_tabs.html -->
+<div class="mt-3">
+  <ul class="nav nav-tabs" id="userTab" role="tablist">
+    <li class="nav-item">
+      <a class="nav-link active" id="partners-list-tab" data-toggle="tab"
+         href="#partners-list" role="tab" aria-controls="partners-list"
+         aria-selected="true">
+        施行パートナー一覧
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" id="partners-add-tab" data-toggle="tab"
+         href="#partners-add" role="tab" aria-controls="partners-add"
+         aria-selected="false">
+        施行パートナー（下請け・協力業者）登録
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" id="staff-list-tab" data-toggle="tab"
+         href="#staff-list" role="tab" aria-controls="staff-list"
+         aria-selected="false">
+        担当者一覧
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" id="staff-add-tab" data-toggle="tab"
+         href="#staff-add" role="tab" aria-controls="staff-add"
+         aria-selected="false">
+        担当者登録
+      </a>
+    </li>
+  </ul>
+
+  <div class="tab-content mt-3" id="userTabContent">
+    <!-- 施行パートナー一覧タブ -->
+    <div class="tab-pane fade show active" id="partners-list" role="tabpanel"
+         aria-labelledby="partners-list-tab">
+      <h2>施行パートナー一覧</h2>
+      <ul class="list-group">
+        {% for partner in partners %}
+          <li class="list-group-item">
+            <strong>業者名:</strong> {{ partner.company_name }}<br>
+            <strong>代表者:</strong> {{ partner.representative or '未入力' }}<br>
+            <strong>電話番号:</strong> {{ partner.phone_number or '未入力' }}<br>
+          </li>
+        {% else %}
+          <li class="list-group-item">登録された施行パートナーはありません</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- 施行パートナー登録タブ -->
+    <div class="tab-pane fade" id="partners-add" role="tabpanel"
+         aria-labelledby="partners-add-tab">
+      <h2>施行パートナー登録</h2>
+      <p>
+        <a href="{{ url_for('add_partner', username=user.username) }}" class="btn btn-primary">
+          施行パートナーを登録
+        </a>
+      </p>
+    </div>
+
+    <!-- 担当者一覧タブ -->
+    <div class="tab-pane fade" id="staff-list" role="tabpanel"
+         aria-labelledby="staff-list-tab">
+      <h2>担当者一覧</h2>
+      <ul class="list-group">
+        {% for st in staffs %}
+          <li class="list-group-item">
+            <strong>担当者氏名:</strong> {{ st.staff_name }}
+          </li>
+        {% else %}
+          <li class="list-group-item">まだ担当者が登録されていません</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- 担当者登録タブ -->
+    <div class="tab-pane fade" id="staff-add" role="tabpanel"
+         aria-labelledby="staff-add-tab">
+      <h2>担当者登録</h2>
+      <p>
+        <a href="{{ url_for('add_staff', username=user.username) }}" class="btn btn-primary">
+          担当者を登録
+        </a>
+      </p>
+    </div>
+  </div>
+</div>
