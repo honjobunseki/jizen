@@ -90,8 +90,7 @@ def load_user(user_id):
 
 @app.before_first_request
 def create_tables():
-    # ★開発環境でのみ既存テーブルを削除してから作成する
-    db.drop_all()
+    # ★開発環境でのみ<×既存テーブルを削除してから>作成する
     db.create_all()
 
 ########################
