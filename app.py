@@ -12,10 +12,9 @@ ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
-# Render等でSECRET_KEYは環境変数で設定（なければfallback）
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback_secret_key')
 
-# PostgreSQLの接続情報を環境変数から取得（Render環境で設定されている前提）
+# PostgreSQL接続情報（Renderの環境変数を利用する場合）
 db_host = os.environ.get('DB_HOST', 'localhost')
 db_name = os.environ.get('DB_NAME', 'jizen')
 db_port = os.environ.get('DB_PORT', '5432')
@@ -36,7 +35,7 @@ login_manager.login_view = 'login'
 ########################
 
 class User(UserMixin, db.Model):
-    __tablename__ = 'users'  # 予約語を避けるため明示的にテーブル名を指定
+    __tablename__ = 'users'  # テーブル名を 'users' にする
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
@@ -51,7 +50,7 @@ def create_tables():
     db.create_all()
 
 ########################
-#         ルート
+#       ルート定義
 ########################
 
 @app.route('/')
@@ -65,7 +64,7 @@ def login():
         uname = request.form.get('username', '').strip()
         pw = request.form.get('password', '').strip()
 
-        # 管理者としてログイン
+        # 管理者としてログインする場合
         if uname == ADMIN_USERNAME and pw == ADMIN_PASSWORD:
             admin = User.query.filter_by(username=ADMIN_USERNAME).first()
             if not admin:
@@ -97,19 +96,21 @@ def logout():
     flash("ログアウトしました", "info")
     return redirect(url_for('index'))
 
-########################
-#     管理画面(admin)
-########################
-
+#################################
+#        管理画面 (admin.html)
+#################################
 @app.route('/admin')
 @login_required
 def admin():
     if not current_user.is_admin:
         return "権限がありません", 403
-    # DBの全ユーザを取得
+    # 全ユーザを取得してテンプレートに渡す
     all_users = User.query.all()
     return render_template('admin.html', users=all_users)
 
+#################################
+#    ユーザ追加 (add_user)
+#################################
 @app.route('/admin/add_user', methods=['GET', 'POST'])
 @login_required
 def add_user():
@@ -133,6 +134,9 @@ def add_user():
             return redirect(url_for('admin'))
     return render_template('add_user.html', error=error)
 
+#################################
+#    ユーザ削除 (delete_user)
+#################################
 @app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
 @login_required
 def delete_user(user_id):
@@ -150,20 +154,20 @@ def delete_user(user_id):
     flash("ユーザが削除されました", "success")
     return redirect(url_for('admin'))
 
-########################
-#      ユーザページ
-########################
-
+#################################
+#       ユーザページ (user_page)
+#################################
 @app.route('/user/<username>')
 @login_required
 def user_page(username):
+    # デバッグ出力: リクエストされたユーザ名
+    print("user_page: requested username =", username)
     user = User.query.filter_by(username=username).first()
     if not user:
         return "ユーザが見つかりません", 404
-    # 管理者はすべてのユーザページにアクセス可能、一般ユーザは自分のページのみ
+    # 管理者は全ユーザページにアクセス可能、一般ユーザは自分のページのみ
     if not current_user.is_admin and user.username != current_user.username:
         return "他のユーザのページにはアクセスできません", 403
-    # ここでは施行パートナー、担当者機能は省略（必要に応じて追加）
     return render_template('user_page.html', user=user)
 
 if __name__ == '__main__':
