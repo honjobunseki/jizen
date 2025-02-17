@@ -17,10 +17,10 @@ ADMIN_USERNAME = 'honjobunseki'
 ADMIN_PASSWORD = '78387838'
 
 app = Flask(__name__)
-# 環境変数からSECRET_KEYを取得（Render環境などで設定済みの場合）
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'fallback_secret_key')
+# Renderなどの環境変数からSECRET_KEYを取得
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', '2x9K#mP9$vL5nX3j@pQ7wR8cY4hN6bM1zD')
 
-# PostgreSQL接続情報（環境変数または直接設定）
+# PostgreSQL接続情報（Render環境の環境変数）
 db_host = os.environ.get('DB_HOST', 'dpg-cuisfvin91rc73bmn8pg-a.oregon-postgres.render.com')
 db_name = os.environ.get('DB_NAME', 'jizen')
 db_port = os.environ.get('DB_PORT', '5432')
@@ -30,11 +30,11 @@ db_password = os.environ.get('DB_PASSWORD', 'vX33zfbVI5AhvxitGnWUOC9SM5K8eoWW')
 app.config['SQLALCHEMY_DATABASE_URI'] = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# アップロード設定
+# アップロード設定（PDFのみ、最大4096KB）
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 4096 * 1024  # 4096KB (約4MB)
+app.config['MAX_CONTENT_LENGTH'] = 4096 * 1024  # 4096KB
 ALLOWED_EXTENSIONS = {'pdf'}
 
 def allowed_file(filename):
@@ -49,12 +49,11 @@ login_manager.login_view = 'login'
 ########################
 
 class User(UserMixin, db.Model):
-    __tablename__ = 'users'  # 予約語 'user' を避けるため 'users'
+    __tablename__ = 'users'  # 予約語'user'を避けるために
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(256), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
-    # リレーション
     partners = db.relationship('Partner', backref='owner', lazy=True)
     staffs = db.relationship('Staff', backref='owner', lazy=True)
 
@@ -100,7 +99,7 @@ class Staff(db.Model):
     preliminary_inspector_reg_number = db.Column(db.String(100))
     preliminary_inspector_training_org = db.Column(db.String(200))
     email = db.Column(db.String(200))
-    # 資格証アップロード用のフィールド
+    # 新しく追加した資格証ファイル名カラム
     asbestos_chief_filename = db.Column(db.String(200))
     building_inspector_filename = db.Column(db.String(200))
 
@@ -110,6 +109,8 @@ def load_user(user_id):
 
 @app.before_first_request
 def create_tables():
+    # 開発環境向け: 毎回テーブルをドロップして再作成（本番環境では使用しないでください）
+    db.drop_all()
     db.create_all()
 
 ########################
@@ -224,9 +225,7 @@ def user_page(username):
         return "他のユーザのページにはアクセスできません", 403
     partners = Partner.query.filter_by(user_id=user.id).all()
     staffs = Staff.query.filter_by(user_id=user.id).all()
-    # certificate変数：ここではstaffごとに資格証の情報が含まれているので、個別にStaffモデルのフィールドとして管理します。
-    # 例えば、アップロード済みの情報はStaffテーブルに保存されます。
-    certificate = None  # 必要に応じて処理を追加
+    certificate = None  # 必要に応じて資格証情報を取得
     return render_template('user_page.html', user=user, partners=partners, staffs=staffs, certificate=certificate)
 
 #################################
@@ -312,7 +311,7 @@ def add_staff(username):
         building_inspector_training_org = request.form.get('building_inspector_training_org', '')
         is_preliminary_inspector = True if request.form.get('is_preliminary_inspector') == 'on' else False
         preliminary_inspector_reg_number = request.form.get('preliminary_inspector_reg_number', '')
-        preliminary_inspector_training_org = request.form.get('preliminary_inspector_training_org') or ''
+        preliminary_inspector_training_org = request.form.get('preliminary_inspector_training_org', '')
         email = request.form.get('email', '')
 
         new_staff = Staff(
@@ -365,7 +364,6 @@ def upload_certificate(username):
         flash("選択された担当者が見つかりません", "warning")
         return redirect(url_for('user_page', username=username))
     
-    # ファイルアップロード処理
     asbestos_file = request.files.get('asbestos_chief_file')
     building_file = request.files.get('building_inspector_file')
     
